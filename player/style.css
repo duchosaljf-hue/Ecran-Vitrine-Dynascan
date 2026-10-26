@@ -1,0 +1,91 @@
+:root {
+  --fade: 800ms;
+  --widget-bg: rgba(0, 0, 0, 0.55);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family: "Noto Sans", "DejaVu Sans", Arial, sans-serif;
+  cursor: none;
+}
+
+#stage, .layer {
+  position: fixed;
+  inset: 0;
+}
+
+.layer {
+  opacity: 0;
+  transition: opacity var(--fade) ease;
+  background: #000;
+}
+.layer.active { opacity: 1; }
+
+.layer img, .layer video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+#empty {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2vh;
+  background: #111;
+}
+#empty[hidden] { display: none; }
+.empty-title { font-size: 7vw; font-weight: 700; letter-spacing: 0.05em; }
+.empty-text { font-size: 2.6vw; opacity: 0.6; }
+
+/* Widget horloge + météo, en haut à droite (légèrement déplacé pour éviter le marquage de la dalle) */
+#widget {
+  position: fixed;
+  top: 2.5vh;
+  right: 4vw;
+  padding: 1.2vh 2.4vw;
+  background: var(--widget-bg);
+  border-radius: 2vw;
+  text-align: center;
+  line-height: 1.15;
+  transition: transform 2s ease;
+  backdrop-filter: blur(6px);
+}
+#widget[hidden] { display: none; }
+#clock { font-size: 7vw; font-weight: 700; font-variant-numeric: tabular-nums; }
+#date { font-size: 2.4vw; opacity: 0.9; }
+#date::first-letter { text-transform: uppercase; }
+#weather { margin-top: 0.8vh; font-size: 2.8vw; white-space: nowrap; }
+#weather:empty { display: none; }
+
+/* Bandeau de messages défilants en bas */
+#ticker {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 6.5vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.7);
+}
+#ticker[hidden] { display: none; }
+#tickerText {
+  white-space: nowrap;
+  font-size: 3.4vw;
+  padding-left: 100%;
+  animation: scroll linear infinite;
+}
+@keyframes scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
+}
