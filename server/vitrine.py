@@ -69,6 +69,7 @@ class Config:
         self.longitude = float(env("LONGITUDE", "-1.4903"))
         self.timezone = env("TIMEZONE", "Europe/Paris")
         self.widgets = env("WIDGETS", "1") == "1"
+        self.temp_warn = float(env("TEMP_WARN_C", "80"))
 
 
 CFG = Config()
@@ -94,6 +95,66 @@ class SyncState:
 
 
 SYNC = SyncState()
+
+
+# --------------------------------------------------------------------------
+# Température du NUC (le BIOS Intel coupe la machine en cas de surchauffe)
+# --------------------------------------------------------------------------
+def read_cpu_temp():
+    """Température la plus haute relevée par le noyau, en °C (None si indisponible)."""
+    values = []
+    for zone in Path("/sys/class/thermal").glob("thermal_zone*/temp"):
+        try:
+            values.append(int(zone.read_text().strip()) / 1000.0)
+        except (OSError, ValueError):
+            continue
+    for sensor in Path("/sys/class/hwmon").glob("hwmon*/temp*_input"):
+        try:
+            values.append(int(sensor.read_text().strip()) / 1000.0)
+        except (OSError, ValueError):
+            continue
+    values = [v for v in values if 0 < v < 150]
+    return round(max(values), 1) if values else None
+
+
+class TempState:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.current = None
+        self.max_24h = None
+        self._window = []  # (horodatage, température)
+
+    def record(self, value):
+        now = time.time()
+        with self.lock:
+            self.current = value
+            if value is None:
+                return
+            self._window.append((now, value))
+            self._window = [(t, v) for t, v in self._window if now - t < 86400]
+            self.max_24h = max(v for _, v in self._window)
+
+    def snapshot(self):
+        with self.lock:
+            return {"current_c": self.current, "max_24h_c": self.max_24h, "warn_c": CFG.temp_warn}
+
+
+TEMP = TempState()
+
+
+def temp_loop():
+    last_log = 0
+    while True:
+        value = read_cpu_temp()
+        TEMP.record(value)
+        if value is not None:
+            if value >= CFG.temp_warn:
+                log.warning("température élevée : %.1f °C (seuil %.0f °C) : nettoyer ou aérer le NUC", value, CFG.temp_warn)
+            elif time.time() - last_log > 3600:
+                log.info("température : %.1f °C (max sur 24 h : %.1f °C)", value, TEMP.snapshot()["max_24h_c"])
+        if time.time() - last_log > 3600:
+            last_log = time.time()
+        time.sleep(60)
 
 
 def sync_once():
@@ -303,7 +364,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/status":
             data = PLAYLIST.current()
             return self.send_json({"ok": True, "items": len(data["items"]),
-                                   "sync": SYNC.snapshot(), "sync_enabled": CFG.sync_enabled})
+                                   "sync": SYNC.snapshot(), "sync_enabled": CFG.sync_enabled,
+                                   "temperature": TEMP.snapshot()})
         if path.startswith("/media/"):
             return self.send_file(CFG.inbox, path[len("/media/"):])
         if path.startswith("/cache/"):
@@ -377,6 +439,7 @@ def main():
     CFG.cache.mkdir(parents=True, exist_ok=True)
     PLAYLIST.refresh()
     threading.Thread(target=playlist_refresh_loop, daemon=True).start()
+    threading.Thread(target=temp_loop, daemon=True).start()
     if CFG.sync_enabled:
         threading.Thread(target=sync_loop, daemon=True).start()
     else:

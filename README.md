@@ -96,6 +96,9 @@ fréquence de synchronisation, etc. Après modification : `sudo systemctl restar
 ## Dépannage
 
 - **État du serveur** : `curl http://127.0.0.1:8080/api/status` (dernière synchronisation, erreur éventuelle).
+- **Température du NUC** : visible dans `/api/status` (champ `temperature` : actuelle et maximum sur 24 h).
+  Un avertissement est écrit dans le journal au-delà de `TEMP_WARN_C` (80 °C par défaut). Un NUC qui dépasse
+  régulièrement 80 °C a besoin d'un dépoussiérage et d'un emplacement mieux aéré.
 - **Journal** : `journalctl -u vitrine -f`
 - **Rien ne s'affiche après un ajout** : vérifier que le fichier est bien dans `vitrine-contenu` et
   attendre 5 minutes ; tester `rclone lsf vitrine:`.
