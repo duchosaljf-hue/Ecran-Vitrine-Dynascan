@@ -47,8 +47,8 @@ avec un compte utilisateur (par exemple `vitrine`) qui servira à l'ouverture au
 1. Récupérer le projet sur le NUC :
    ```bash
    sudo apt install -y git
-   git clone https://github.com/duchosaljf-hue/ecran-vitrine-dynascan.git
-   cd ecran-vitrine-dynascan
+   git clone -b claude/vitrine-player https://github.com/duchosaljf-hue/Ecran-Vitrine-Dynascan.git
+   cd Ecran-Vitrine-Dynascan
    ```
 2. Installer :
    ```bash
