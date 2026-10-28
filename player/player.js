@@ -1,10 +1,11 @@
 "use strict";
 
 // Player de la vitrine : lit /api/playlist en boucle, avec fondu enchaîné,
-// horloge, météo (Open-Meteo) et bandeau de messages.
+// vue météo intercalée (Open-Meteo), petite horloge optionnelle et bandeau de messages.
 
 const POLL_MS = 60 * 1000;          // vérification de la playlist
 const WEATHER_MS = 15 * 60 * 1000;  // rafraîchissement météo
+const WEATHER_MAX_AGE_MS = 3 * 3600 * 1000; // au-delà, la météo en cache n'est plus affichée
 const VIDEO_TIMEOUT_MS = 10 * 60 * 1000; // sécurité : une vidéo bloquée est abandonnée
 
 const layers = [document.getElementById("layerA"), document.getElementById("layerB")];
@@ -12,7 +13,6 @@ const emptyEl = document.getElementById("empty");
 const widgetEl = document.getElementById("widget");
 const clockEl = document.getElementById("clock");
 const dateEl = document.getElementById("date");
-const weatherEl = document.getElementById("weather");
 const tickerEl = document.getElementById("ticker");
 const tickerText = document.getElementById("tickerText");
 
@@ -22,6 +22,8 @@ let index = 0;
 let front = 0;          // couche actuellement visible
 let timer = null;
 let config = {};
+let weather = null;     // dernière météo connue
+let sinceWeather = 0;   // diapositives affichées depuis la dernière vue météo
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -36,6 +38,7 @@ async function pollPlaylist() {
   try {
     const next = await fetchJSON("/api/playlist");
     config = next.config || {};
+    widgetEl.hidden = !config.corner_clock;
     if (next.version !== playlist.version) {
       if (playlist.items.length === 0) {
         applyPlaylist(next);
@@ -54,11 +57,11 @@ function applyPlaylist(next) {
   pending = null;
   index = 0;
   renderTicker(next.messages || []);
-  setWidgets(config.widgets !== false);
   emptyEl.hidden = next.items.length > 0;
 }
 
 function renderTicker(messages) {
+  document.body.classList.toggle("has-ticker", messages.length > 0);
   if (!messages.length) {
     tickerEl.hidden = true;
     return;
@@ -98,6 +101,22 @@ function waitLoaded(el, item) {
   });
 }
 
+// Affiche un élément sur la couche arrière puis fait un fondu enchaîné.
+function present(el) {
+  const back = 1 - front;
+  const old = layers[front];
+  layers[back].replaceChildren(el);
+  layers[back].classList.add("active");
+  old.classList.remove("active");
+  front = back;
+  // libère l'ancienne diapositive (surtout une vidéo) une fois le fondu terminé
+  setTimeout(() => { if (!old.classList.contains("active")) old.replaceChildren(); }, 1500);
+}
+
+function weatherIsFresh() {
+  return weather && Date.now() - weather.at < WEATHER_MAX_AGE_MS;
+}
+
 async function showNext() {
   clearTimeout(timer);
   timer = null;
@@ -113,6 +132,15 @@ async function showNext() {
     return;
   }
 
+  // Vue météo dédiée, intercalée toutes les N diapositives
+  const every = Number(config.weather_every) || 0;
+  if (every > 0 && sinceWeather >= every && weatherIsFresh()) {
+    sinceWeather = 0;
+    present(buildWeatherSlide(weather));
+    timer = setTimeout(showNext, (Number(config.weather_seconds) || 10) * 1000);
+    return;
+  }
+
   const item = items[index];
   index += 1;
   const el = buildElement(item);
@@ -125,14 +153,8 @@ async function showNext() {
     return;
   }
 
-  const back = 1 - front;
-  const old = layers[front];
-  layers[back].replaceChildren(el);
-  layers[back].classList.add("active");
-  old.classList.remove("active");
-  front = back;
-  // libère l'ancienne diapositive (surtout une vidéo) une fois le fondu terminé
-  setTimeout(() => { if (!old.classList.contains("active")) old.replaceChildren(); }, 1500);
+  present(el);
+  sinceWeather += 1;
 
   if (item.type === "video") {
     el.play().catch((e) => console.warn("lecture vidéo refusée :", e));
@@ -146,33 +168,36 @@ async function showNext() {
     el.addEventListener("ended", done, { once: true });
     el.addEventListener("error", done, { once: true });
     timer = setTimeout(done, VIDEO_TIMEOUT_MS);
-  } else if (items.length === 1 && !pending) {
-    // une seule image : elle reste affichée, on revérifie simplement la playlist
-    index = 0;
-    timer = setTimeout(showNext, POLL_MS);
   } else {
     timer = setTimeout(showNext, (item.duration || 10) * 1000);
   }
 }
 
-// ---------------------------------------------------------------- widgets
-function setWidgets(on) {
-  widgetEl.hidden = !on;
+// ---------------------------------------------------------------- horloge
+function formatTime(now) {
+  return now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDate(now) {
+  return now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
 function tickClock() {
   const now = new Date();
-  clockEl.textContent = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  dateEl.textContent = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  clockEl.textContent = formatTime(now);
+  dateEl.textContent = formatDate(now);
+  // l'horloge de la vue météo, si elle est à l'écran
+  document.querySelectorAll(".ws-time").forEach((e) => { e.textContent = formatTime(now); });
 }
 
-// Léger déplacement du widget toutes les minutes pour limiter l'image rémanente.
+// Léger déplacement de l'horloge en coin toutes les minutes pour limiter l'image rémanente.
 function nudgeWidget() {
   const dx = Math.round((Math.random() - 0.5) * 24);
   const dy = Math.round((Math.random() - 0.5) * 24);
   widgetEl.style.transform = `translate(${dx}px, ${dy}px)`;
 }
 
+// ---------------------------------------------------------------- météo
 const WEATHER_CODES = [
   [[0], "☀️", "Ensoleillé"],
   [[1, 2], "🌤️", "Éclaircies"],
@@ -195,37 +220,77 @@ async function updateWeather() {
   if (config.latitude === undefined) return;
   const url = "https://api.open-meteo.com/v1/forecast" +
     `?latitude=${config.latitude}&longitude=${config.longitude}` +
-    "&current=temperature_2m,weather_code" +
-    "&daily=temperature_2m_max,temperature_2m_min" +
-    `&timezone=${encodeURIComponent(config.timezone || "auto")}&forecast_days=1`;
+    "&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m" +
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+    `&timezone=${encodeURIComponent(config.timezone || "auto")}&forecast_days=5`;
   try {
     const data = await fetchJSON(url);
-    const w = {
+    const days = data.daily.time.map((day, i) => ({
+      day,
+      code: data.daily.weather_code[i],
+      min: Math.round(data.daily.temperature_2m_min[i]),
+      max: Math.round(data.daily.temperature_2m_max[i]),
+      rain: data.daily.precipitation_probability_max ? data.daily.precipitation_probability_max[i] : null,
+    }));
+    weather = {
       temp: Math.round(data.current.temperature_2m),
+      feels: Math.round(data.current.apparent_temperature),
+      wind: Math.round(data.current.wind_speed_10m),
       code: data.current.weather_code,
-      min: Math.round(data.daily.temperature_2m_min[0]),
-      max: Math.round(data.daily.temperature_2m_max[0]),
+      days,
       at: Date.now(),
     };
-    try { localStorage.setItem("weather", JSON.stringify(w)); } catch (_) { /* ignoré */ }
-    renderWeather(w);
+    try { localStorage.setItem("weather2", JSON.stringify(weather)); } catch (_) { /* ignoré */ }
   } catch (err) {
     console.warn("météo indisponible :", err);
-    try {
-      const cached = JSON.parse(localStorage.getItem("weather") || "null");
-      // on garde l'ancienne valeur au plus 3 heures
-      if (cached && Date.now() - cached.at < 3 * 3600 * 1000) renderWeather(cached);
-      else weatherEl.textContent = "";
-    } catch (_) {
-      weatherEl.textContent = "";
+    if (!weather) {
+      try { weather = JSON.parse(localStorage.getItem("weather2") || "null"); } catch (_) { weather = null; }
     }
   }
 }
 
-function renderWeather(w) {
-  const { icon, label } = describeWeather(w.code);
-  const city = config.city ? config.city + " · " : "";
-  weatherEl.textContent = `${icon} ${city}${w.temp}°C ${label} (${w.min}° / ${w.max}°)`;
+function mk(tag, className, text) {
+  const e = document.createElement(tag);
+  if (className) e.className = className;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+// Vue météo plein écran (portrait) : ville, heure, météo actuelle, prévisions sur 4 jours.
+function buildWeatherSlide(w) {
+  const now = new Date();
+  const current = describeWeather(w.code);
+  const root = mk("div", "weather-slide");
+
+  const head = mk("div", "ws-head");
+  head.append(mk("div", "ws-city", config.city || ""));
+  head.append(mk("div", "ws-time", formatTime(now)));
+  head.append(mk("div", "ws-date", formatDate(now)));
+  root.append(head);
+
+  const main = mk("div", "ws-main");
+  main.append(mk("div", "ws-icon", current.icon));
+  main.append(mk("div", "ws-temp", `${w.temp}°`));
+  main.append(mk("div", "ws-label", current.label));
+  const today = w.days[0];
+  const details = [`Ressenti ${w.feels}°`, `Vent ${w.wind} km/h`];
+  if (today && today.rain !== null) details.push(`Pluie ${today.rain} %`);
+  main.append(mk("div", "ws-details", details.join("  ·  ")));
+  if (today) main.append(mk("div", "ws-range", `Min ${today.min}°   Max ${today.max}°`));
+  root.append(main);
+
+  const forecast = mk("div", "ws-forecast");
+  w.days.slice(1, 5).forEach((d) => {
+    const cell = mk("div", "ws-day");
+    const name = new Date(d.day + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short" });
+    cell.append(mk("div", "ws-day-name", name));
+    cell.append(mk("div", "ws-day-icon", describeWeather(d.code).icon));
+    cell.append(mk("div", "ws-day-max", `${d.max}°`));
+    cell.append(mk("div", "ws-day-min", `${d.min}°`));
+    forecast.append(cell);
+  });
+  root.append(forecast);
+  return root;
 }
 
 // ---------------------------------------------------------------- démarrage

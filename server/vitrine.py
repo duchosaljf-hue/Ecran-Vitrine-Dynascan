@@ -68,7 +68,11 @@ class Config:
         self.latitude = float(env("LATITUDE", "47.2978"))
         self.longitude = float(env("LONGITUDE", "-1.4903"))
         self.timezone = env("TIMEZONE", "Europe/Paris")
-        self.widgets = env("WIDGETS", "1") == "1"
+        # Petite horloge en coin sur toutes les diapositives (0 = désactivée)
+        self.corner_clock = env("CORNER_CLOCK", "0") == "1"
+        # Vue météo plein écran : une fois toutes les N diapositives (0 = désactivée)
+        self.weather_every = max(0, int(env("WEATHER_EVERY", "3")))
+        self.weather_seconds = max(3, int(env("WEATHER_SECONDS", "10")))
         self.temp_warn = float(env("TEMP_WARN_C", "80"))
 
 
@@ -331,7 +335,8 @@ class PlaylistCache:
             "messages": messages,
             "config": {
                 "city": CFG.city, "latitude": CFG.latitude, "longitude": CFG.longitude,
-                "timezone": CFG.timezone, "widgets": CFG.widgets,
+                "timezone": CFG.timezone, "corner_clock": CFG.corner_clock,
+                "weather_every": CFG.weather_every, "weather_seconds": CFG.weather_seconds,
             },
         }
 

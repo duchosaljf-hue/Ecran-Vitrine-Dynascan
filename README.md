@@ -6,7 +6,7 @@ Diffusion automatique d'images, de vidéos et de PDF sur l'écran DynaScan DS552
 ```
 Dossier Drive « vitrine-contenu »  ──rclone (lecture seule)──►  NUC (Ubuntu)
                                                                   ├─ server/vitrine.py   synchro + playlist + PDF → images
-                                                                  └─ Chrome plein écran  → player/ (horloge, météo, messages)
+                                                                  └─ Chrome plein écran  → player/ (diaporama, vue météo, messages)
                                                                           │ HDMI 1
                                                                           ▼
                                                                   Écran DynaScan (allumage 7h, extinction 21h30 par l'écran lui-même)
@@ -38,6 +38,11 @@ Format idéal pour une image ou une page : **1080 × 1920 px** (portrait).
 
 **Bandeau de messages défilants** : un fichier texte nommé `messages.txt` dans le dossier,
 un message par ligne (les lignes commençant par `#` sont ignorées).
+
+**Vue météo** : toutes les 3 diapositives, une vue plein écran affiche l'heure, la météo actuelle de
+Carquefou et les prévisions des 4 jours suivants (source : Open-Meteo, sans compte). Réglable dans
+`config.env` : `WEATHER_EVERY` (0 pour la désactiver), `WEATHER_SECONDS`, `CORNER_CLOCK` (petite horloge en coin).
+Sans Internet, la dernière météo connue reste affichée 3 heures, puis la vue est simplement sautée.
 
 ## Installation sur le NUC
 

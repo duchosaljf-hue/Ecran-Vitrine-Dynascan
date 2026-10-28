@@ -65,8 +65,6 @@ html, body {
 #clock { font-size: 7vw; font-weight: 700; font-variant-numeric: tabular-nums; }
 #date { font-size: 2.4vw; opacity: 0.9; }
 #date::first-letter { text-transform: uppercase; }
-#weather { margin-top: 0.8vh; font-size: 2.8vw; white-space: nowrap; }
-#weather:empty { display: none; }
 
 /* Bandeau de messages défilants en bas */
 #ticker {
@@ -89,3 +87,52 @@ html, body {
   from { transform: translateX(0); }
   to   { transform: translateX(-100%); }
 }
+
+/* Vue météo plein écran : unité --u = 1 % de la largeur en portrait (1080 px), réduite en paysage */
+.weather-slide {
+  --u: min(1vw, 0.5625vh);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: calc(var(--u) * 7) calc(var(--u) * 5) calc(var(--u) * 6);
+  background: linear-gradient(170deg, #1b2a41 0%, #0d1520 55%, #3a1018 100%);
+  text-align: center;
+  color: #fff;
+}
+.ws-head { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1); }
+.ws-city { font-size: calc(var(--u) * 5); letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.75; }
+.ws-time { font-size: calc(var(--u) * 17); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.ws-date { font-size: calc(var(--u) * 4.6); opacity: 0.85; }
+.ws-date::first-letter { text-transform: uppercase; }
+
+.ws-main { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1); }
+.ws-icon { font-size: calc(var(--u) * 30); line-height: 1.1; }
+.ws-temp { font-size: calc(var(--u) * 30); font-weight: 700; line-height: 1; }
+.ws-label { font-size: calc(var(--u) * 7); }
+.ws-details { margin-top: calc(var(--u) * 2); font-size: calc(var(--u) * 4); opacity: 0.8; }
+.ws-range { font-size: calc(var(--u) * 5); opacity: 0.9; }
+
+.ws-forecast {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: calc(var(--u) * 2);
+}
+.ws-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--u) * 0.8);
+  padding: calc(var(--u) * 2.5) 0;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: calc(var(--u) * 2.5);
+}
+.ws-day-name { font-size: calc(var(--u) * 4); text-transform: uppercase; opacity: 0.8; }
+.ws-day-icon { font-size: calc(var(--u) * 9); line-height: 1.2; }
+.ws-day-max { font-size: calc(var(--u) * 5); font-weight: 700; }
+.ws-day-min { font-size: calc(var(--u) * 4); opacity: 0.65; }
+/* le bandeau de messages ne doit pas recouvrir les prévisions */
+body.has-ticker .weather-slide { padding-bottom: calc(var(--u) * 6 + 6.5vh); }
