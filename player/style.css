@@ -1,6 +1,12 @@
 :root {
   --fade: 800ms;
-  --widget-bg: rgba(0, 0, 0, 0.55);
+  --u: 10.8px;                 /* unité de mise en page : 1 % de la largeur d'un écran portrait 1080 px */
+  --rouge: #E30613;
+  --creme: #F5EFE8;
+  --gris: #3D3D3D;
+  --vert: #54A097;
+  --vert-clair: #A0D4CC;
+  --font: 'Orpi', 'Inter', 'Helvetica Neue', Arial, 'Noto Sans', 'DejaVu Sans', sans-serif;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -11,14 +17,11 @@ html, body {
   overflow: hidden;
   background: #000;
   color: #fff;
-  font-family: "Noto Sans", "DejaVu Sans", Arial, sans-serif;
+  font-family: var(--font);
   cursor: none;
 }
 
-#stage, .layer {
-  position: fixed;
-  inset: 0;
-}
+#stage, .layer { position: fixed; top: 0; right: 0; bottom: 0; left: 0; }
 
 .layer {
   opacity: 0;
@@ -27,59 +30,89 @@ html, body {
 }
 .layer.active { opacity: 1; }
 
-.layer img, .layer video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
+/* ------------------------------------------------------------ affiches, images, vidéos */
+.slide { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: #000; overflow: hidden; }
+.slide img.main, .slide video.main {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  object-fit: contain; display: block;
+}
+.slide.fit-cover img.main, .slide.fit-cover video.main { object-fit: cover; }
+.slide .bg {
+  position: absolute; top: -5%; left: -5%; width: 110%; height: 110%;
+  background-size: cover; background-position: center;
+  filter: blur(calc(var(--u) * 2.5)) brightness(0.7);
 }
 
+/* pastille diagonale en haut à gauche */
+.ribbon {
+  position: absolute;
+  top: calc(var(--u) * 7);
+  left: calc(var(--u) * -10);
+  width: calc(var(--u) * 46);
+  padding: calc(var(--u) * 1.1) 0;
+  transform: rotate(-45deg);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: calc(var(--u) * 3.3);
+  font-weight: 800;
+  color: #fff;
+  background: var(--rouge);
+  box-shadow: 0 calc(var(--u) * 0.6) calc(var(--u) * 1.6) rgba(0, 0, 0, 0.35);
+}
+.ribbon-nouveau { background: var(--vert); }
+.ribbon-vendu { background: #1f1f1f; }
+.ribbon-compromis { background: #c9760a; }
+
+/* ------------------------------------------------------------ états spéciaux */
 #empty {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.2vh;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 1.5);
   background: #111;
 }
 #empty[hidden] { display: none; }
-.empty-title { font-size: 7vw; font-weight: 700; letter-spacing: 0.05em; }
-.empty-text { font-size: 2.6vw; opacity: 0.6; }
+.empty-title { font-size: calc(var(--u) * 8); font-weight: 700; letter-spacing: 0.05em; }
+.empty-text { font-size: calc(var(--u) * 3); opacity: 0.6; }
 
-/* Widget horloge + météo, en haut à droite (légèrement déplacé pour éviter le marquage de la dalle) */
-#widget {
-  position: fixed;
-  top: 2.5vh;
-  right: 4vw;
-  padding: 1.2vh 2.4vw;
-  background: var(--widget-bg);
-  border-radius: 2vw;
+#override {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 4);
+  padding: calc(var(--u) * 8);
+  background: var(--rouge);
   text-align: center;
-  line-height: 1.15;
+}
+#override[hidden] { display: none; }
+.ov-label { font-size: calc(var(--u) * 4); letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.85; }
+.ov-text { font-size: calc(var(--u) * 9); font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+
+/* ------------------------------------------------------------ petite horloge en coin */
+#widget {
+  position: fixed; top: calc(var(--u) * 2.5); right: calc(var(--u) * 4);
+  padding: calc(var(--u) * 1.2) calc(var(--u) * 2.4);
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: calc(var(--u) * 2);
+  text-align: center; line-height: 1.15;
   transition: transform 2s ease;
-  backdrop-filter: blur(6px);
+  z-index: 10;
 }
 #widget[hidden] { display: none; }
-#clock { font-size: 7vw; font-weight: 700; font-variant-numeric: tabular-nums; }
-#date { font-size: 2.4vw; opacity: 0.9; }
+#clock { font-size: calc(var(--u) * 7); font-weight: 700; font-variant-numeric: tabular-nums; }
+#date { font-size: calc(var(--u) * 2.4); opacity: 0.9; }
 #date::first-letter { text-transform: uppercase; }
 
-/* Bandeau de messages défilants en bas */
+/* ------------------------------------------------------------ bandeau de messages */
 #ticker {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  height: 6.5vh;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.7);
+  position: fixed; left: 0; right: 0; bottom: 0;
+  height: calc(var(--u) * 6.5);
+  display: flex; align-items: center; overflow: hidden;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 10;
 }
 #ticker[hidden] { display: none; }
 #tickerText {
-  white-space: nowrap;
-  font-size: 3.4vw;
+  white-space: nowrap; font-size: calc(var(--u) * 3.4);
   padding-left: 100%;
   animation: scroll linear infinite;
 }
@@ -88,44 +121,28 @@ html, body {
   to   { transform: translateX(-100%); }
 }
 
-/* Vue météo plein écran : unité --u = 1 % de la largeur en portrait (1080 px), réduite en paysage */
+/* ------------------------------------------------------------ vue météo */
 .weather-slide {
-  --u: min(1vw, 0.5625vh);
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column; justify-content: space-between; align-items: center;
   padding: calc(var(--u) * 7) calc(var(--u) * 5) calc(var(--u) * 6);
   background: linear-gradient(170deg, #1b2a41 0%, #0d1520 55%, #3a1018 100%);
-  text-align: center;
-  color: #fff;
+  text-align: center; color: #fff;
 }
 .ws-head { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1); }
 .ws-city { font-size: calc(var(--u) * 5); letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.75; }
 .ws-time { font-size: calc(var(--u) * 17); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .ws-date { font-size: calc(var(--u) * 4.6); opacity: 0.85; }
 .ws-date::first-letter { text-transform: uppercase; }
-
 .ws-main { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1); }
 .ws-icon { font-size: calc(var(--u) * 30); line-height: 1.1; }
 .ws-temp { font-size: calc(var(--u) * 30); font-weight: 700; line-height: 1; }
 .ws-label { font-size: calc(var(--u) * 7); }
 .ws-details { margin-top: calc(var(--u) * 2); font-size: calc(var(--u) * 4); opacity: 0.8; }
 .ws-range { font-size: calc(var(--u) * 5); opacity: 0.9; }
-
-.ws-forecast {
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: calc(var(--u) * 2);
-}
+.ws-forecast { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(var(--u) * 2); }
 .ws-day {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: calc(var(--u) * 0.8);
+  display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 0.8);
   padding: calc(var(--u) * 2.5) 0;
   background: rgba(255, 255, 255, 0.08);
   border-radius: calc(var(--u) * 2.5);
@@ -134,5 +151,44 @@ html, body {
 .ws-day-icon { font-size: calc(var(--u) * 9); line-height: 1.2; }
 .ws-day-max { font-size: calc(var(--u) * 5); font-weight: 700; }
 .ws-day-min { font-size: calc(var(--u) * 4); opacity: 0.65; }
-/* le bandeau de messages ne doit pas recouvrir les prévisions */
-body.has-ticker .weather-slide { padding-bottom: calc(var(--u) * 6 + 6.5vh); }
+body.has-ticker .weather-slide,
+body.has-ticker .view-slide { padding-bottom: calc(var(--u) * 6 + var(--u) * 6.5); }
+
+/* ------------------------------------------------------------ vues (annonce, QR code, agence) */
+.view-slide {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: calc(var(--u) * 9) calc(var(--u) * 8);
+  text-align: center; overflow: hidden;
+  background: var(--creme); color: var(--gris);
+}
+.view-slide .ring {
+  position: absolute; width: calc(var(--u) * 58); height: calc(var(--u) * 58);
+  right: calc(var(--u) * -20); top: calc(var(--u) * -18); opacity: 0.95;
+}
+.view-slide .ring.small {
+  width: calc(var(--u) * 34); height: calc(var(--u) * 34);
+  left: calc(var(--u) * -12); right: auto; top: auto; bottom: calc(var(--u) * -12);
+}
+.view-slide > *:not(.ring) { position: relative; z-index: 1; }
+.v-heading {
+  font-size: calc(var(--u) * 9); font-weight: 800; line-height: 1.1; color: var(--rouge);
+  margin-bottom: calc(var(--u) * 5); overflow-wrap: anywhere;
+}
+.v-text { font-size: calc(var(--u) * 4.4); line-height: 1.4; white-space: pre-line; overflow-wrap: anywhere; }
+.v-caption { font-size: calc(var(--u) * 4); line-height: 1.35; margin-top: calc(var(--u) * 5); overflow-wrap: anywhere; }
+.v-qr {
+  width: calc(var(--u) * 52); height: calc(var(--u) * 52);
+  background: #fff; padding: calc(var(--u) * 3); border-radius: calc(var(--u) * 2.5);
+  box-shadow: 0 calc(var(--u) * 0.8) calc(var(--u) * 2.4) rgba(0, 0, 0, 0.15);
+}
+.v-name { font-size: calc(var(--u) * 6.4); font-weight: 800; margin-bottom: calc(var(--u) * 3); overflow-wrap: anywhere; }
+.v-line { font-size: calc(var(--u) * 4.2); line-height: 1.4; margin-bottom: calc(var(--u) * 3); white-space: pre-line; overflow-wrap: anywhere; }
+.v-phone { font-size: calc(var(--u) * 8); font-weight: 800; color: var(--rouge); margin: calc(var(--u) * 2) 0 calc(var(--u) * 4); }
+.v-site { font-size: calc(var(--u) * 4.4); font-weight: 700; color: var(--vert); }
+.theme-rouge { background: var(--rouge); color: #fff; }
+.theme-rouge .v-heading { color: #fff; }
+.theme-vert { background: var(--vert); color: #fff; }
+.theme-vert .v-heading { color: #fff; }
+.theme-sombre { background: #161616; color: #f3f3f3; }
+.theme-sombre .v-heading { color: var(--rouge); }

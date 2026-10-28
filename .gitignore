@@ -1,4 +1,5 @@
+*.pyc
+.venv/
+__pycache__/
 config.env
 data/
-__pycache__/
-*.pyc
