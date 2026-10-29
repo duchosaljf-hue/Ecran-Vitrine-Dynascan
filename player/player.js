@@ -28,6 +28,7 @@ const tickerEl = document.getElementById("ticker");
 const tickerText = document.getElementById("tickerText");
 const overrideEl = document.getElementById("override");
 const overrideText = document.getElementById("overrideText");
+const closedEl = document.getElementById("closed");
 
 let cfg = { screen: {}, site: {} };   // réglages de l'écran et du site (toujours les plus récents)
 let units = null;                     // contenus en cours de diffusion
@@ -41,6 +42,7 @@ let sinceWeather = 0;
 let timer = null;
 let override = null;
 let paused = false;
+let closed = false;                   // hors des heures d'ouverture de l'écran : écran noir
 let weather = null;
 let clockOffset = 0;                  // décalage entre l'heure du serveur et celle de l'appareil
 let front = 0;
@@ -67,6 +69,50 @@ function fmtTime(d) {
 function fmtDate(d) {
   const opts = { weekday: "long", day: "numeric", month: "long", timeZone: cfg.site.timezone || undefined };
   try { return d.toLocaleDateString("fr-FR", opts); } catch (_) { delete opts.timeZone; return d.toLocaleDateString("fr-FR", opts); }
+}
+
+function toMinutes(hhmm) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || "");
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+
+// minutes écoulées depuis minuit, à l'heure du site (le serveur fait foi, pas l'horloge de l'appareil)
+function localMinutes() {
+  const now = serverNow();
+  try {
+    const parts = new Intl.DateTimeFormat("fr-FR", {
+      hour: "numeric", minute: "numeric", hourCycle: "h23", timeZone: cfg.site.timezone || undefined,
+    }).formatToParts(now);
+    const get = (t) => Number((parts.find((p) => p.type === t) || {}).value);
+    return get("hour") * 60 + get("minute");
+  } catch (_) {
+    return now.getHours() * 60 + now.getMinutes();
+  }
+}
+
+function outsideHours() {
+  const s = cfg.screen || {};
+  if (!s.hours_enabled) return false;
+  const start = toMinutes(s.open_time);
+  const end = toMinutes(s.close_time);
+  if (start === null || end === null || start === end) return false;
+  const now = localMinutes();
+  const open = start < end ? (now >= start && now < end) : (now >= start || now < end);  // plage qui passe minuit
+  return !open;
+}
+
+function updateClosed() {
+  const now = outsideHours();
+  if (now === closed) return;
+  closed = now;
+  closedEl.hidden = !closed;
+  if (closed) {
+    clearTimeout(timer);
+    timer = null;
+    document.querySelectorAll("video").forEach((v) => { try { v.pause(); } catch (_) { /* ignoré */ } });
+  } else if (started) {
+    kick();
+  }
 }
 
 function setUnit() {
@@ -105,6 +151,7 @@ function applyPlaylist(data) {
   }
   if (data.server_time) clockOffset = data.server_time - Date.now();
   cfg = { screen: data.screen || {}, site: data.site || {} };
+  updateClosed();
   widgetEl.hidden = !cfg.screen.corner_clock;
   renderTicker(cfg.screen.ticker || []);
 
@@ -129,7 +176,7 @@ function applyPlaylist(data) {
   if (!started) {
     started = true;
     kick();
-  } else if (!timer && !override) {
+  } else if (!timer && !override && !closed) {
     kick();
   }
   setUnit();
@@ -288,7 +335,7 @@ function schedule(ms) {
 function kick() {
   clearTimeout(timer);
   timer = null;
-  if (override) return;
+  if (override || closed) return;
   showNext();
 }
 
@@ -311,7 +358,7 @@ async function showNext() {
 async function showNextInner() {
   clearTimeout(timer);
   timer = null;
-  if (override) return;
+  if (override || closed) return;
   if (paused) { schedule(3000); return; }
 
   const every = Number(cfg.screen.weather_every) || 0;
@@ -339,7 +386,7 @@ async function showNextInner() {
     schedule(1000);
     return;
   }
-  if (override) return;
+  if (override || closed) return;
   present(built.el);
   sinceWeather += 1;
 
@@ -508,6 +555,7 @@ function nudgeWidget() {
 async function start() {
   setInterval(tickClock, 1000);
   setInterval(nudgeWidget, 60 * 1000);
+  setInterval(updateClosed, 15 * 1000);
   await pollPlaylist();
   if (!started) {
     emptyEl.hidden = false;

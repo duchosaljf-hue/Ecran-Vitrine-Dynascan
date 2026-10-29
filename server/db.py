@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS screens (
     ticker TEXT NOT NULL DEFAULT '',
     open_time TEXT NOT NULL DEFAULT '07:00',
     close_time TEXT NOT NULL DEFAULT '21:30',
+    hours_enabled INTEGER NOT NULL DEFAULT 0,
     override_text TEXT,
     override_until TEXT,
     paused_until TEXT,
@@ -173,6 +174,10 @@ def init_db():
     CFG.ensure_dirs()
     with db() as conn:
         conn.executescript(SCHEMA)
+        # bases créées avant l'option « écran noir en dehors des heures d'ouverture »
+        columns = {r["name"] for r in conn.execute("PRAGMA table_info(screens)")}
+        if "hours_enabled" not in columns:
+            conn.execute("ALTER TABLE screens ADD COLUMN hours_enabled INTEGER NOT NULL DEFAULT 0")
         for key, value in default_settings().items():
             conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)", (key, value))
         if conn.execute("SELECT COUNT(*) FROM screens").fetchone()[0] == 0:

@@ -84,6 +84,10 @@ html, body {
   text-align: center;
 }
 #override[hidden] { display: none; }
+/* hors des heures d'ouverture : écran noir, tout le reste est suspendu */
+#closed { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100; background: #000; }
+#closed[hidden] { display: none; }
+
 .ov-label { font-size: calc(var(--u) * 4); letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.85; }
 .ov-text { font-size: calc(var(--u) * 9); font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
 

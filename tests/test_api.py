@@ -201,6 +201,14 @@ def main():
         check(s["weather_every"] == 5 and s["fit"] == "blur" and s["ticker"] == "Ligne 1\nLigne 2", "réglages d'écran")
         r = client.patch(f"/api/screens/{sid}", json={"open_time": "25:99"}, headers=H)
         check(r.status_code == 400, "heure invalide refusée")
+        check(s["hours_enabled"] is False, "écran noir hors heures désactivé par défaut")
+        r = client.patch(f"/api/screens/{sid}", json={"hours_enabled": True, "open_time": "07:00", "close_time": "21:30"}, headers=H)
+        check(r.json()["screen"]["hours_enabled"] is True, "écran noir hors heures activé")
+        pl = client.get("/api/player/canlarriz/playlist").json()["screen"]
+        check(pl["hours_enabled"] is True and pl["open_time"] == "07:00" and pl["close_time"] == "21:30", "heures transmises au player")
+        pl = client.get("/api/player/canlarriz/playlist?preview=1").json()["screen"]
+        check(pl["hours_enabled"] is False, "l'aperçu ignore les heures d'ouverture")
+        client.patch(f"/api/screens/{sid}", json={"hours_enabled": False}, headers=H)
         r = client.post(f"/api/screens/{sid}/override", json={"text": "Fermeture exceptionnelle", "minutes": 30}, headers=H)
         pl = client.get("/api/player/canlarriz/playlist?preview=1").json()
         check(pl["override"]["text"] == "Fermeture exceptionnelle", "message urgent")

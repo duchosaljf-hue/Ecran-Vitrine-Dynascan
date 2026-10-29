@@ -201,6 +201,7 @@ class ScreenPatch(BaseModel):
     ticker: Optional[str] = None
     open_time: Optional[str] = None
     close_time: Optional[str] = None
+    hours_enabled: Optional[bool] = None
 
 
 class OverrideBody(BaseModel):
@@ -727,6 +728,7 @@ def screen_dict(row, now=None):
         "weather_every": row["weather_every"], "weather_seconds": row["weather_seconds"],
         "corner_clock": bool(row["corner_clock"]), "fit": row["fit"], "ticker": row["ticker"],
         "open_time": row["open_time"], "close_time": row["close_time"],
+        "hours_enabled": bool(row["hours_enabled"]),
         "last_seen": row["last_seen"], "last_ip": row["last_ip"],
         "online": seconds is not None and seconds <= ONLINE_SECONDS, "seconds_since": seconds,
         "override": {"text": row["override_text"], "until": row["override_until"]}
@@ -799,6 +801,8 @@ def api_screen_patch(screen_id: int, body: ScreenPatch, principal=Depends(auth.r
             updates["open_time"] = valid_hhmm(body.open_time, "ouverture")
         if "close_time" in fields and body.close_time is not None:
             updates["close_time"] = valid_hhmm(body.close_time, "fermeture")
+        if "hours_enabled" in fields and body.hours_enabled is not None:
+            updates["hours_enabled"] = int(body.hours_enabled)
         if updates:
             sets = ", ".join(f"{k} = ?" for k in updates)
             conn.execute(f"UPDATE screens SET {sets} WHERE id = ?", (*updates.values(), screen_id))
@@ -1062,6 +1066,9 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
                    "weather_every": 0 if only is not None else screen["weather_every"],
                    "weather_seconds": screen["weather_seconds"], "corner_clock": bool(screen["corner_clock"]) and only is None,
                    "fit": screen["fit"], "default_duration": screen["default_duration"],
+                   # l'aperçu ignore les heures d'ouverture : on doit pouvoir le consulter à tout moment
+                   "hours_enabled": bool(screen["hours_enabled"]) and not preview,
+                   "open_time": screen["open_time"], "close_time": screen["close_time"],
                    "ticker": [] if only is not None else [l for l in screen["ticker"].splitlines() if l.strip()]},
         "site": {"city": settings["city"], "latitude": float(settings["latitude"]),
                  "longitude": float(settings["longitude"]), "timezone": settings["timezone"]},

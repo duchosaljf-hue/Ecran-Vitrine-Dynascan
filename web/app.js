@@ -729,6 +729,7 @@ function openScreenSettings(s, refresh) {
     ticker: h("textarea", { maxlength: 1000 }, s.ticker),
     open_time: h("input", { type: "time", value: s.open_time }),
     close_time: h("input", { type: "time", value: s.close_time }),
+    hours_enabled: h("input", { type: "checkbox", checked: s.hours_enabled }),
   };
   const body = h("div", {},
     h("div", { class: "row" }, field("Nom", f.name), field("Orientation", f.orientation)),
@@ -737,7 +738,8 @@ function openScreenSettings(s, refresh) {
     h("div", { class: "row" }, field("Météo toutes les … diapositives", f.weather_every, "0 = jamais"), field("Durée de la météo (s)", f.weather_seconds)),
     h("label", { class: "chk", style: { marginBottom: "14px" } }, f.corner_clock, "Petite horloge en coin sur toutes les diapositives"),
     field("Bandeau de messages défilants", f.ticker, "Un message par ligne. Vide = pas de bandeau."),
-    h("div", { class: "row" }, field("Allumage de l'écran", f.open_time, "Pour les alertes « écran hors ligne »."), field("Extinction de l'écran", f.close_time)));
+    h("div", { class: "row" }, field("Ouverture (allumage)", f.open_time, "Sert aussi aux alertes « écran hors ligne »."), field("Fermeture (extinction)", f.close_time)),
+    h("label", { class: "chk", style: { marginBottom: "14px" } }, f.hours_enabled, "Écran noir en dehors de ces heures (la vitrine ne diffuse plus rien la nuit)"));
   const actions = [{ label: "Annuler" }];
   if (s.slug !== state.defaultScreen) {
     actions.unshift({ label: "Supprimer", kind: "danger", onClick: async () => {
@@ -750,7 +752,7 @@ function openScreenSettings(s, refresh) {
       name: f.name.value, orientation: f.orientation.value, order_mode: f.order_mode.value, fit: f.fit.value,
       default_duration: parseInt(f.default_duration.value, 10), weather_every: parseInt(f.weather_every.value, 10),
       weather_seconds: parseInt(f.weather_seconds.value, 10), corner_clock: f.corner_clock.checked, ticker: f.ticker.value,
-      open_time: f.open_time.value, close_time: f.close_time.value,
+      open_time: f.open_time.value, close_time: f.close_time.value, hours_enabled: f.hours_enabled.checked,
     });
     toast("Réglages enregistrés"); refresh();
   } });

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-VERSION = "2.0"
+VERSION = "2.1"
 
 
 def load_env_file(path):
