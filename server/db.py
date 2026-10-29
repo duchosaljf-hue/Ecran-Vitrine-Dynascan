@@ -112,7 +112,8 @@ def default_settings():
         "longitude": CFG.longitude,
         "timezone": CFG.timezone,
         "default_duration": str(CFG.default_duration),
-        "default_weight": "1",
+        "default_weight": "3",
+        "priority_levels": "0",
         "new_badge_days": "14",
         "default_screen": "dynascan",
         "alerts_enabled": "0",
@@ -180,6 +181,12 @@ def init_db():
             conn.execute("ALTER TABLE screens ADD COLUMN hours_enabled INTEGER NOT NULL DEFAULT 0")
         for key, value in default_settings().items():
             conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)", (key, value))
+        # passage de l'importance 1-5 aux trois niveaux vert (5) / orange (3) / rouge (1), une seule fois :
+        # l'ancienne « normale » (1-2) devient orange, l'ancienne « fréquente » (3 et plus) devient verte
+        if conn.execute("SELECT value FROM settings WHERE key = 'priority_levels'").fetchone()[0] != "1":
+            conn.execute("UPDATE items SET weight = CASE WHEN weight >= 3 THEN 5 ELSE 3 END")
+            conn.execute("UPDATE settings SET value = '3' WHERE key = 'default_weight' AND value IN ('1', '2')")
+            conn.execute("UPDATE settings SET value = '1' WHERE key = 'priority_levels'")
         if conn.execute("SELECT COUNT(*) FROM screens").fetchone()[0] == 0:
             now = now_iso()
             conn.execute(

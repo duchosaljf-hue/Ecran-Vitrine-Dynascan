@@ -76,7 +76,13 @@ function ago(seconds) {
   return "il y a " + Math.round(seconds / 86400) + " j";
 }
 
-function stars(n) { return "★".repeat(n) + "☆".repeat(5 - n); }
+// priorité de diffusion : vert = fréquent et plus long, orange = moyen, rouge = faible (stockée en importance 5 / 3 / 1)
+const PRIORITIES = [
+  { value: 5, level: "green", label: "Prioritaire", sub: "Fréquent, durée la plus longue" },
+  { value: 3, level: "orange", label: "Moyenne", sub: "Fréquence et durée normales" },
+  { value: 1, level: "red", label: "Faible", sub: "Rare, durée plus courte" },
+];
+function priorityOf(weight) { return weight >= 4 ? PRIORITIES[0] : weight >= 2 ? PRIORITIES[1] : PRIORITIES[2]; }
 
 function setTimer(fn, ms) {
   clearInterval(state.timer);
@@ -192,7 +198,7 @@ function segmented(options, current, onChange) {
   const wrap = h("div", { class: "seg", role: "group" });
   const buttons = [];
   options.forEach((o) => {
-    const b = h("button", { type: "button", class: o.value === current ? "on" : "", onclick: () => {
+    const b = h("button", { type: "button", class: (o.value === current ? "on " : "") + (o.cls || ""), onclick: () => {
       buttons.forEach((x) => x.classList.remove("on"));
       b.classList.add("on");
       onChange(o.value);
@@ -326,7 +332,7 @@ function itemCard(it) {
       h("div", { class: "title" }, it.title || "Sans titre"),
       h("div", { class: "pills" }, stateChip(it)),
       h("div", { class: "meta" },
-        h("span", { class: "stars", title: "Importance" }, stars(it.weight)),
+        h("span", { class: "prio " + priorityOf(it.weight).level, title: priorityOf(it.weight).sub }, priorityOf(it.weight).label),
         h("span", {}, it.duration ? it.duration + " s" : "durée par défaut"),
         it.end_date ? h("span", {}, "jusqu'au " + fmtDay(it.end_date)) : null),
       h("div", { class: "meta" }, h("span", {}, screens))));
@@ -488,9 +494,8 @@ async function pageItem(id, expectView) {
     h("label", { class: "chk" }, allChk, "Tous les écrans"),
     boxes.map((b) => h("label", { class: "chk" }, b.input, b.name)));
 
-  const imp = segmented([
-    { value: 1, label: "1", sub: "Normale" }, { value: 2, label: "2" }, { value: 3, label: "3", sub: "Fréquente" }, { value: 4, label: "4" }, { value: 5, label: "5", sub: "Très fréquente" },
-  ], it.weight, (v) => { draft.weight = v; });
+  draft.weight = priorityOf(it.weight).value;
+  const imp = segmented(PRIORITIES.map((p) => ({ value: p.value, label: p.label, sub: p.sub, cls: "prio-" + p.level })), draft.weight, (v) => { draft.weight = v; });
   const statusSeg = segmented([{ value: "active", label: "Diffusé" }, { value: "draft", label: "Brouillon" }], draft.status, (v) => { draft.status = v; });
 
   // contenu propre aux vues
@@ -625,7 +630,7 @@ async function pageItem(id, expectView) {
     isView ? viewFields : null,
     isView ? null : h("div", { class: "row" }, field("Référence", ref), field("Prix affiché (€)", price, "Lu dans le PDF si possible. Sert à détecter une baisse de prix.")),
     field("Statut", statusSeg, "Un brouillon n'est pas diffusé."),
-    field("Importance", imp, "Plus l'importance est élevée, plus ce contenu revient souvent dans l'enchaînement."),
+    field("Priorité de diffusion", imp, "Vert : revient souvent et s'affiche plus longtemps. Orange : normal. Rouge : revient rarement et s'affiche moins longtemps. La durée automatique ne s'applique que si vous n'indiquez pas de durée ci-dessous."),
     field(isView ? "Durée d'affichage (secondes)" : "Durée par page (secondes)", duration, "Laissez vide pour utiliser la durée par défaut de l'écran."),
     h("div", { class: "row" }, field("Date de début", start, "Par défaut : le jour de l'ajout."), h("div", {}, field("Date de fin", end), shortcuts)),
     field("Pastille sur l'affiche", badgeSel), badgeRow,
@@ -856,6 +861,7 @@ async function pageSettings() {
   const txt = (key, opts) => { f[key] = h("input", Object.assign({ type: "text", value: settings[key] }, opts || {})); return f[key]; };
   const num = (key, min, max) => { f[key] = h("input", { type: "number", min, max, value: settings[key] }); return f[key]; };
 
+  f.default_weight = h("select", {}, PRIORITIES.map((p) => h("option", { value: p.value, selected: p.value === priorityOf(parseInt(settings.default_weight, 10)).value }, p.label)));
   f.default_screen = h("select", {}, state.screens.map((s) => h("option", { value: s.slug, selected: s.slug === settings.default_screen }, s.name)));
   f.smtp_security = h("select", {}, [["starttls", "STARTTLS (587)"], ["ssl", "SSL/TLS (465)"], ["none", "Aucune"]].map(([v, l]) => h("option", { value: v, selected: v === settings.smtp_security }, l)));
   f.alerts_enabled = h("input", { type: "checkbox", checked: settings.alerts_enabled });
@@ -902,7 +908,7 @@ async function pageSettings() {
         h("div", { class: "row" }, field("Ville", txt("city")), field("Fuseau horaire", txt("timezone"))),
         h("div", { class: "row" }, field("Latitude", txt("latitude")), field("Longitude", txt("longitude")))),
       h("div", { class: "card" }, h("h2", {}, "Valeurs par défaut"),
-        h("div", { class: "row" }, field("Durée d'une page (s)", num("default_duration", 3, 600)), field("Importance d'un nouveau bien (1-5)", num("default_weight", 1, 5)),
+        h("div", { class: "row" }, field("Durée d'une page (s)", num("default_duration", 3, 600)), field("Priorité d'un nouveau bien", f.default_weight),
           field("Durée des pastilles « Nouveau » et « Baisse de prix » (jours)", num("new_badge_days", 1, 365))),
         field("Écran par défaut", f.default_screen, "C'est celui affiché quand l'adresse du player n'indique aucun écran (le DynaScan du NUC).")),
       h("div", { class: "card" }, h("h2", {}, "Alertes par e-mail"),

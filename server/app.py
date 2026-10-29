@@ -1006,12 +1006,27 @@ def agency_view(settings, data):
     return merged
 
 
+# priorité de diffusion : vert = fréquent et plus long, orange = moyen, rouge = faible
+def priority_level(weight):
+    return "high" if weight >= 4 else "medium" if weight >= 2 else "low"
+
+
+PRIORITY_DURATION = {"high": 1.5, "medium": 1.0, "low": 0.7}
+
+
+def effective_duration(row, screen):
+    """Durée choisie pour ce contenu ; à défaut, celle de l'écran ajustée selon la priorité."""
+    if row["duration"]:
+        return row["duration"]
+    return max(3, round(screen["default_duration"] * PRIORITY_DURATION[priority_level(row["weight"])]))
+
+
 def make_unit(row, screen, settings, today):
     """Convertit un bien en « contenu » prêt à être diffusé (None si rien à afficher)."""
     slides = jloads(row["slides"], [])
     badge = effective_badge(row, today)
     unit = {"id": row["id"], "kind": row["kind"], "title": row["title"], "weight": row["weight"],
-            "duration": row["duration"] or screen["default_duration"], "badge": badge,
+            "duration": effective_duration(row, screen), "badge": badge,
             "badge_label": BADGES.get(badge, "")}
     if row["kind"] == "view":
         data = jloads(row["view_data"], {})

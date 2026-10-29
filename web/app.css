@@ -127,7 +127,14 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--vert); bord
 .actionbar { position: sticky; bottom: 0; background: rgba(245, 239, 232, 0.95); backdrop-filter: blur(6px); padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); display: flex; gap: 10px; flex-wrap: wrap; border-top: 1px solid var(--ligne); margin-top: 18px; z-index: 5; }
 .history { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; }
 .history li { padding: 6px 0; border-bottom: 1px solid var(--ligne); }
-.stars { color: var(--orange); letter-spacing: 1px; }
+.prio { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; }
+.prio::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
+.prio.green { color: #2e8b57; }
+.prio.orange { color: #e08a00; }
+.prio.red { color: var(--rouge); }
+.seg button.prio-green.on { background: #2e8b57; }
+.seg button.prio-orange.on { background: #e08a00; }
+.seg button.prio-red.on { background: var(--rouge); }
 .progress { height: 8px; background: #e8e1d6; border-radius: 99px; overflow: hidden; }
 .progress > div { height: 100%; background: var(--rouge); width: 0; transition: width 0.2s; }
 

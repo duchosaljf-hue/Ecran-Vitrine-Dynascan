@@ -116,6 +116,13 @@ def main():
         pl = client.get("/api/player/dynascan/playlist").json()
         check(len(pl["items"]) == 1 and pl["items"][0]["weight"] == 3, "bien présent dans la playlist")
         check(pl["items"][0]["duration"] == 10 and len(pl["items"][0]["slides"]) == 2, "durée par défaut de l'écran")
+        for weight, expected, label in ((5, 15, "vert : durée la plus longue"), (3, 10, "orange : durée normale"), (1, 7, "rouge : durée plus courte")):
+            client.patch(f"/api/items/{item_id}", json={"weight": weight}, headers=H)
+            got = client.get("/api/player/dynascan/playlist").json()["items"][0]
+            check(got["duration"] == expected and got["weight"] == weight, f"{label} ({got['duration']} s)")
+        client.patch(f"/api/items/{item_id}", json={"weight": 5, "duration": 12}, headers=H)
+        check(client.get("/api/player/dynascan/playlist").json()["items"][0]["duration"] == 12, "durée choisie respectée quelle que soit la priorité")
+        client.patch(f"/api/items/{item_id}", json={"weight": 3, "duration": None}, headers=H)
         pl_default = client.get("/api/player/default/playlist").json()
         check(pl_default["screen"]["slug"] == "dynascan", "alias « default »")
 

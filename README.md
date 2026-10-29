@@ -17,7 +17,9 @@ de régler leur diffusion, et de piloter **plusieurs écrans** (DynaScan, Canlar
 ## Ce que fait l'application
 
 - **Biens** : on dépose un PDF d'affiche (ou une image, une vidéo). Le titre et le prix sont lus dans le PDF quand il contient du texte.
-  Pour chaque bien : durée par page, **importance de 1 à 5** (plus c'est haut, plus le bien revient souvent), **date de début**
+  Pour chaque bien : durée par page, **priorité de diffusion** en trois niveaux colorés
+  (🟢 **vert** : revient souvent et s'affiche plus longtemps ; 🟠 **orange** : normal ; 🔴 **rouge** : revient rarement et s'affiche moins longtemps),
+  **date de début**
   (par défaut le jour de l'ajout) et **date de fin**, pastille (« Nouveau », « Baisse de prix », « Exclusivité », « Sous compromis », « Vendu »),
   écrans concernés, notes.
 - **Baisse de prix** : quand on **remplace l'affiche** d'un bien par une version au prix plus bas, la pastille « Baisse de prix »
@@ -25,7 +27,9 @@ de régler leur diffusion, et de piloter **plusieurs écrans** (DynaScan, Canlar
 - **Vues** : écrans d'information intercalés avec les affiches : *Annonce* (titre + texte), *QR code* (lien vers votre site, une estimation, une offre d'emploi…),
   *Agence* (nom, adresse, téléphone, horaires, repris des Réglages). Elles ont les mêmes réglages que les biens (durée, importance, dates, écrans).
 - **Météo** : une vue plein écran (heure, météo actuelle, prévisions sur 4 jours) toutes les N diapositives, réglable **par écran**.
-- **Ordre de diffusion** : aléatoire pondéré par l'importance, sans répétition immédiate (ou du plus récent au plus ancien).
+- **Ordre de diffusion** : aléatoire pondéré par la priorité (vert = 5 passages pour 3 orange et 1 rouge dans un tour), sans répétition immédiate
+  (ou du plus récent au plus ancien). Sans durée précisée sur la fiche, la durée de l'écran est multipliée par 1,5 (vert), 1 (orange) ou 0,7 (rouge) ;
+  une durée saisie sur la fiche est toujours respectée.
 - **Écrans** : un profil par écran (orientation, durée par défaut, ajustement des affiches, météo, bandeau de messages défilants), avec état en ligne / hors ligne,
   **aperçu**, **pause** et **message urgent** (affiché en grand sur fond rouge pendant la durée choisie).
 - **Heures d'ouverture par écran** : dans les réglages d'un écran, cochez « Écran noir en dehors de ces heures » : la vitrine n'affiche plus rien
