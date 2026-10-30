@@ -18,7 +18,7 @@ de régler leur diffusion, et de piloter **plusieurs écrans** (DynaScan, Canlar
 
 - **Biens** : on dépose un PDF d'affiche (ou une image, une vidéo). Le titre et le prix sont lus dans le PDF quand il contient du texte.
   Pour chaque bien : durée par page, **priorité de diffusion** en trois niveaux colorés
-  (🟢 **vert** : revient souvent et s'affiche plus longtemps ; 🟠 **orange** : normal ; 🔴 **rouge** : revient rarement et s'affiche moins longtemps),
+  (réglable dans la fiche du bien, ou d'un clic sur la pastille colorée de la liste ; 🟢 **vert** : revient souvent et s'affiche plus longtemps ; 🟠 **orange** : normal ; 🔴 **rouge** : revient rarement et s'affiche moins longtemps),
   **date de début**
   (par défaut le jour de l'ajout) et **date de fin**, pastille (« Nouveau », « Baisse de prix », « Exclusivité », « Sous compromis », « Vendu »),
   écrans concernés, notes.
@@ -54,6 +54,10 @@ Chaque écran a une **adresse** (page *Écrans*, bouton *Copier*) :
 |---|---|
 | Écran branché au NUC (DynaScan) | `http://127.0.0.1:8080/` (lancée automatiquement au démarrage du NUC : écran par défaut) |
 | Canlarriz et autres | `http://ADRESSE-DU-NUC:8080/?screen=canlarriz` |
+
+**Ajouter un écran** (par exemple un 2e Canlarriz) : page *Écrans* → « + Ajouter un écran », nom « Canlarriz 2 », et choisir « Réglages de départ : comme Écran Canlarriz »
+(l'adresse devient `http://ADRESSE-DU-NUC:8080/?screen=canlarriz-2`). Les biens réglés sur « Tous les écrans » y apparaissent tout de suite ; ceux limités à certains écrans
+sont à cocher dans leur fiche. Chaque nouveau Canlarriz : réservation d'IP dans la box, programme LedArt avec cette adresse, « Mise hors tension continue » activée.
 
 Sur le Canlarriz : dans LedArt, élément **HTML**, « Chemin de la page » = l'adresse ci-dessus, **rafraîchissement désactivé**, durée de pause la plus grande possible.
 Réservez à une **adresse IP fixe** le NUC dans la box (réservation DHCP) pour que les adresses ne changent pas.

@@ -187,6 +187,7 @@ class ScreenCreate(BaseModel):
     name: str
     slug: str = ""
     orientation: Literal["portrait", "landscape"] = "portrait"
+    copy_from: Optional[int] = None   # identifiant d'un écran dont on reprend tous les réglages
 
 
 class ScreenPatch(BaseModel):
@@ -763,6 +764,14 @@ def api_screen_create(body: ScreenCreate, principal=Depends(auth.require_ready_a
             " VALUES (?,?,?,?,?,?,?)",
             (slug, name, body.orientation, int(settings["default_duration"]), CFG.weather_every,
              CFG.weather_seconds, now_iso()))
+        if body.copy_from is not None:
+            source = conn.execute("SELECT * FROM screens WHERE id = ?", (body.copy_from,)).fetchone()
+            if not source:
+                raise HTTPException(404, "L'écran à copier est introuvable.")
+            keys = ("orientation", "order_mode", "default_duration", "weather_every", "weather_seconds",
+                    "corner_clock", "fit", "ticker", "open_time", "close_time", "hours_enabled")
+            sets = ", ".join(f"{k} = ?" for k in keys)
+            conn.execute(f"UPDATE screens SET {sets} WHERE slug = ?", (*[source[k] for k in keys], slug))
         audit(conn, principal.username, "ecran-cree", None, f"{name} ({slug})")
         row = conn.execute("SELECT * FROM screens WHERE slug = ?", (slug,)).fetchone()
     return {"screen": screen_dict(row)}

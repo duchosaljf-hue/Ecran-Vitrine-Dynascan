@@ -317,6 +317,31 @@ function stateChip(it) {
   return h("span", { class: "chip green" }, "Diffusé");
 }
 
+// pastille de priorité d'une carte : un clic passe au niveau suivant (vert → orange → rouge → vert)
+function prioButton(it) {
+  const btn = h("button", { type: "button", class: "prio" });
+  const paint = () => {
+    const p = priorityOf(it.weight);
+    btn.className = "prio " + p.level;
+    btn.textContent = p.label;
+    btn.title = p.sub + " (cliquez pour changer)";
+  };
+  btn.onclick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const order = PRIORITIES.map((p) => p.value);
+    const next = order[(order.indexOf(priorityOf(it.weight).value) + 1) % order.length];
+    try {
+      const res = await api("PATCH", "/api/items/" + it.id, { weight: next });
+      it.weight = res.item.weight;
+      paint();
+      toast("Priorité : " + priorityOf(it.weight).label);
+    } catch (err) { toast(err.message, true); }
+  };
+  paint();
+  return btn;
+}
+
 function itemCard(it) {
   const href = "#/" + (it.kind === "view" ? "vues" : "biens") + "/" + it.id;
   let thumb;
@@ -332,7 +357,7 @@ function itemCard(it) {
       h("div", { class: "title" }, it.title || "Sans titre"),
       h("div", { class: "pills" }, stateChip(it)),
       h("div", { class: "meta" },
-        h("span", { class: "prio " + priorityOf(it.weight).level, title: priorityOf(it.weight).sub }, priorityOf(it.weight).label),
+        prioButton(it),
         h("span", {}, it.duration ? it.duration + " s" : "durée par défaut"),
         it.end_date ? h("span", {}, "jusqu'au " + fmtDay(it.end_date)) : null),
       h("div", { class: "meta" }, h("span", {}, screens))));
@@ -715,9 +740,17 @@ function openOverride(s, refresh) {
 function openNewScreen() {
   const name = h("input", { type: "text", maxlength: 60, placeholder: "Ex. : Hall d'entrée" });
   const orient = h("select", {}, [["portrait", "Portrait"], ["landscape", "Paysage"]].map(([v, l]) => h("option", { value: v }, l)));
-  modal("Ajouter un écran", h("div", {}, field("Nom", name), field("Orientation", orient)), { actions: [
+  const copy = h("select", {}, [h("option", { value: "" }, "Réglages par défaut")].concat(
+    state.screens.map((s) => h("option", { value: s.id }, "Comme « " + s.name + " »"))));
+  copy.onchange = () => { const src = state.screens.find((s) => String(s.id) === copy.value); if (src) orient.value = src.orientation; };
+  modal("Ajouter un écran", h("div", {}, field("Nom", name), field("Orientation", orient),
+    field("Réglages de départ", copy, "Reprend l'orientation, les durées, la météo, le bandeau et les heures d'ouverture d'un écran existant.")), { actions: [
     { label: "Annuler" },
-    { label: "Créer", kind: "primary", onClick: async () => { await api("POST", "/api/screens", { name: name.value, orientation: orient.value }); toast("Écran ajouté"); pageScreens(); } },
+    { label: "Créer", kind: "primary", onClick: async () => {
+      const body = { name: name.value, orientation: orient.value };
+      if (copy.value) body.copy_from = parseInt(copy.value, 10);
+      await api("POST", "/api/screens", body); toast("Écran ajouté"); pageScreens();
+    } },
   ] });
 }
 

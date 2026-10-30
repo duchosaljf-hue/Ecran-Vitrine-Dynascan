@@ -227,6 +227,14 @@ def main():
         check(client.get("/api/player/canlarriz/playlist?preview=1").json()["paused"] is False, "reprise")
         r = client.post("/api/screens", json={"name": "Hall d'entrée", "orientation": "landscape"}, headers=H)
         check(r.json()["screen"]["slug"] == "hall-d-entree", "création d'un écran")
+        client.patch(f"/api/screens/{sid}", json={"weather_every": 7, "open_time": "08:00", "close_time": "20:00", "hours_enabled": True, "ticker": "Bonjour"}, headers=H)
+        r = client.post("/api/screens", json={"name": "Canlarriz 2", "copy_from": sid}, headers=H)
+        copy = r.json()["screen"]
+        check(copy["slug"] == "canlarriz-2" and copy["weather_every"] == 7 and copy["open_time"] == "08:00" and copy["close_time"] == "20:00"
+              and copy["hours_enabled"] is True and copy["ticker"] == "Bonjour" and copy["orientation"] == "landscape", "écran créé avec les réglages d'un autre")
+        r = client.post("/api/screens", json={"name": "Canlarriz 3", "copy_from": 9999}, headers=H)
+        check(r.status_code == 404, "copie d'un écran inconnu refusée")
+        client.patch(f"/api/screens/{sid}", json={"weather_every": 5, "open_time": "07:00", "close_time": "21:30", "hours_enabled": False, "ticker": "Ligne 1\nLigne 2"}, headers=H)
         client.get("/api/player/hall-d-entree/playlist?preview=1")
         hall = [x for x in client.get("/api/screens").json()["screens"] if x["slug"] == "hall-d-entree"][0]
         check(hall["online"] is False, "l'aperçu ne compte pas comme un écran en ligne")

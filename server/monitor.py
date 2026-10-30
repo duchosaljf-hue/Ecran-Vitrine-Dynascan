@@ -134,7 +134,7 @@ def check_screens():
             offline = (now - seen) > timedelta(minutes=OFFLINE_ALERT_MINUTES)
             if offline and within_hours(screen, now.astimezone(tz)) and not screen["alerted"]:
                 conn.execute("UPDATE screens SET alerted = 1 WHERE id = ?", (screen["id"],))
-                to_alert.append((screen["name"], screen["last_seen"]))
+                to_alert.append((screen["name"], seen.astimezone(tz).strftime("%d/%m/%Y à %H:%M")))
     for name, last_seen in to_alert:
         _alert(f"Écran hors ligne : {name}",
                f"L'écran « {name} » ne répond plus depuis plus de {OFFLINE_ALERT_MINUTES} minutes "
