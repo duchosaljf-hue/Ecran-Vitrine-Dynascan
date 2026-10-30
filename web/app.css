@@ -129,6 +129,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--vert); bord
 .history li { padding: 6px 0; border-bottom: 1px solid var(--ligne); }
 .prio { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.85rem; background: none; border: 0; padding: 4px 6px; margin: -4px -6px; border-radius: 8px; font-family: inherit; cursor: pointer; }
 .prio:hover { background: rgba(0, 0, 0, 0.06); }
+.prio.locked { cursor: not-allowed; }
+.seg button:disabled { cursor: not-allowed; opacity: 0.6; }
 .prio::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: currentColor; }
 .prio.green { color: #2e8b57; }
 .prio.orange { color: #e08a00; }

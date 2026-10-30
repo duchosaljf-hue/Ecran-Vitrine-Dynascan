@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS items (
     error TEXT,
     duration INTEGER,
     weight INTEGER NOT NULL DEFAULT 1,
+    priority_locked INTEGER NOT NULL DEFAULT 0,
     start_date TEXT,
     end_date TEXT,
     badge TEXT NOT NULL DEFAULT '',
@@ -114,6 +115,13 @@ def default_settings():
         "default_duration": str(CFG.default_duration),
         "default_weight": "3",
         "priority_levels": "0",
+        # réglage administrateur : passages par tour et durée (en % de la durée de l'écran) de chaque couleur
+        "priority_weight_high": "5",
+        "priority_weight_medium": "3",
+        "priority_weight_low": "1",
+        "priority_pct_high": "150",
+        "priority_pct_medium": "100",
+        "priority_pct_low": "70",
         "new_badge_days": "14",
         "default_screen": "dynascan",
         "alerts_enabled": "0",
@@ -179,6 +187,9 @@ def init_db():
         columns = {r["name"] for r in conn.execute("PRAGMA table_info(screens)")}
         if "hours_enabled" not in columns:
             conn.execute("ALTER TABLE screens ADD COLUMN hours_enabled INTEGER NOT NULL DEFAULT 0")
+        item_columns = {r["name"] for r in conn.execute("PRAGMA table_info(items)")}
+        if "priority_locked" not in item_columns:
+            conn.execute("ALTER TABLE items ADD COLUMN priority_locked INTEGER NOT NULL DEFAULT 0")
         for key, value in default_settings().items():
             conn.execute("INSERT OR IGNORE INTO settings(key, value) VALUES (?, ?)", (key, value))
         # passage de l'importance 1-5 aux trois niveaux vert (5) / orange (3) / rouge (1), une seule fois :

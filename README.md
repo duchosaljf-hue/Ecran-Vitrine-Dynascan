@@ -27,9 +27,10 @@ de régler leur diffusion, et de piloter **plusieurs écrans** (DynaScan, Canlar
 - **Vues** : écrans d'information intercalés avec les affiches : *Annonce* (titre + texte), *QR code* (lien vers votre site, une estimation, une offre d'emploi…),
   *Agence* (nom, adresse, téléphone, horaires, repris des Réglages). Elles ont les mêmes réglages que les biens (durée, importance, dates, écrans).
 - **Météo** : une vue plein écran (heure, météo actuelle, prévisions sur 4 jours) toutes les N diapositives, réglable **par écran**.
-- **Ordre de diffusion** : aléatoire pondéré par la priorité (vert = 5 passages pour 3 orange et 1 rouge dans un tour), sans répétition immédiate
-  (ou du plus récent au plus ancien). Sans durée précisée sur la fiche, la durée de l'écran est multipliée par 1,5 (vert), 1 (orange) ou 0,7 (rouge) ;
-  une durée saisie sur la fiche est toujours respectée.
+- **Ordre de diffusion** : aléatoire pondéré par la couleur, sans répétition immédiate (ou du plus récent au plus ancien).
+  **Les utilisateurs choisissent la couleur** d'un bien ; **l'administrateur règle ce que chaque couleur signifie** (Réglages → Priorités de diffusion) :
+  nombre de passages par tour (par défaut 5 / 3 / 1) et durée en pourcentage de celle de l'écran (150 % / 100 % / 70 %). Une durée saisie sur la fiche d'un bien est toujours respectée.
+  **Si l'administrateur corrige la couleur d'un bien, elle est verrouillée** (🔒) : l'utilisateur ne peut plus la changer, tant que l'administrateur ne décoche pas le verrou dans la fiche.
 - **Écrans** : un profil par écran (orientation, durée par défaut, ajustement des affiches, météo, bandeau de messages défilants), avec état en ligne / hors ligne,
   **aperçu**, **pause** et **message urgent** (affiché en grand sur fond rouge pendant la durée choisie).
 - **Heures d'ouverture par écran** : dans les réglages d'un écran, cochez « Écran noir en dehors de ces heures » : la vitrine n'affiche plus rien

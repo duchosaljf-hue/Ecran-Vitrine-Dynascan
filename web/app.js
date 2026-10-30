@@ -320,20 +320,23 @@ function stateChip(it) {
 // pastille de priorité d'une carte : un clic passe au niveau suivant (vert → orange → rouge → vert)
 function prioButton(it) {
   const btn = h("button", { type: "button", class: "prio" });
+  const mayChange = () => state.user.role === "admin" || !it.priority_locked;
   const paint = () => {
     const p = priorityOf(it.weight);
-    btn.className = "prio " + p.level;
-    btn.textContent = p.label;
-    btn.title = p.sub + " (cliquez pour changer)";
+    btn.className = "prio " + p.level + (mayChange() ? "" : " locked");
+    btn.textContent = p.label + (it.priority_locked ? " 🔒" : "");
+    btn.title = p.sub + (mayChange() ? " (cliquez pour changer)" : " — priorité fixée par l'administrateur");
   };
   btn.onclick = async (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!mayChange()) { toast("La priorité de ce bien a été fixée par l'administrateur.", true); return; }
     const order = PRIORITIES.map((p) => p.value);
     const next = order[(order.indexOf(priorityOf(it.weight).value) + 1) % order.length];
     try {
       const res = await api("PATCH", "/api/items/" + it.id, { weight: next });
       it.weight = res.item.weight;
+      it.priority_locked = res.item.priority_locked;
       paint();
       toast("Priorité : " + priorityOf(it.weight).label);
     } catch (err) { toast(err.message, true); }
@@ -519,8 +522,21 @@ async function pageItem(id, expectView) {
     h("label", { class: "chk" }, allChk, "Tous les écrans"),
     boxes.map((b) => h("label", { class: "chk" }, b.input, b.name)));
 
-  draft.weight = priorityOf(it.weight).value;
-  const imp = segmented(PRIORITIES.map((p) => ({ value: p.value, label: p.label, sub: p.sub, cls: "prio-" + p.level })), draft.weight, (v) => { draft.weight = v; });
+  const isAdmin = state.user.role === "admin";
+  const lockedForMe = !isAdmin && !!it.priority_locked;
+  const initialPrio = priorityOf(it.weight).value;
+  draft.weight = initialPrio;
+  draft.locked = !!it.priority_locked;
+  const lockChk = h("input", { type: "checkbox", checked: draft.locked, onchange: () => { draft.locked = lockChk.checked; } });
+  const imp = segmented(PRIORITIES.map((p) => ({ value: p.value, label: p.label, sub: p.sub, cls: "prio-" + p.level })), draft.weight, (v) => {
+    draft.weight = v;
+    // une correction faite par l'administrateur verrouille la priorité ; il peut décocher la case s'il préfère laisser la main
+    if (isAdmin) { draft.locked = v !== initialPrio ? true : !!it.priority_locked; lockChk.checked = draft.locked; }
+  });
+  if (lockedForMe) imp.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+  const prioExtra = lockedForMe
+    ? h("div", { class: "banner" }, "🔒 La priorité de ce bien a été fixée par l'administrateur : lui seul peut la modifier.")
+    : isAdmin ? h("label", { class: "chk" }, lockChk, "🔒 Verrouiller la priorité (les utilisateurs ne peuvent plus la modifier)") : null;
   const statusSeg = segmented([{ value: "active", label: "Diffusé" }, { value: "draft", label: "Brouillon" }], draft.status, (v) => { draft.status = v; });
 
   // contenu propre aux vues
@@ -554,6 +570,7 @@ async function pageItem(id, expectView) {
       badge: draft.badge, badge_until: draft.badge ? (badgeUntil.value || null) : null,
       screens: draft.allScreens ? "*" : draft.screens,
     };
+    if (isAdmin) payload.priority_locked = draft.locked;
     if (!isView) payload.price = price.value === "" ? null : parseInt(price.value, 10);
     if (isView) payload.view_data = collectView();
     if (!draft.allScreens && !draft.screens.length) { toast("Choisissez au moins un écran.", true); return; }
@@ -656,6 +673,7 @@ async function pageItem(id, expectView) {
     isView ? null : h("div", { class: "row" }, field("Référence", ref), field("Prix affiché (€)", price, "Lu dans le PDF si possible. Sert à détecter une baisse de prix.")),
     field("Statut", statusSeg, "Un brouillon n'est pas diffusé."),
     field("Priorité de diffusion", imp, "Vert : revient souvent et s'affiche plus longtemps. Orange : normal. Rouge : revient rarement et s'affiche moins longtemps. La durée automatique ne s'applique que si vous n'indiquez pas de durée ci-dessous."),
+    prioExtra,
     field(isView ? "Durée d'affichage (secondes)" : "Durée par page (secondes)", duration, "Laissez vide pour utiliser la durée par défaut de l'écran."),
     h("div", { class: "row" }, field("Date de début", start, "Par défaut : le jour de l'ajout."), h("div", {}, field("Date de fin", end), shortcuts)),
     field("Pastille sur l'affiche", badgeSel), badgeRow,
@@ -919,6 +937,9 @@ async function pageSettings() {
         agency_hours: f.agency_hours.value, agency_site: f.agency_site.value, city: f.city.value, latitude: f.latitude.value,
         longitude: f.longitude.value, timezone: f.timezone.value, default_duration: parseInt(f.default_duration.value, 10),
         default_weight: parseInt(f.default_weight.value, 10), new_badge_days: parseInt(f.new_badge_days.value, 10),
+        priority_weight_high: parseInt(f.priority_weight_high.value, 10), priority_weight_medium: parseInt(f.priority_weight_medium.value, 10),
+        priority_weight_low: parseInt(f.priority_weight_low.value, 10), priority_pct_high: parseInt(f.priority_pct_high.value, 10),
+        priority_pct_medium: parseInt(f.priority_pct_medium.value, 10), priority_pct_low: parseInt(f.priority_pct_low.value, 10),
         default_screen: f.default_screen.value, alerts_enabled: f.alerts_enabled.checked, alert_to: f.alert_to.value,
         smtp_host: f.smtp_host.value, smtp_port: parseInt(f.smtp_port.value, 10) || 587, smtp_security: f.smtp_security.value,
         smtp_user: f.smtp_user.value, smtp_from: f.smtp_from.value, smtp_password: f.smtp_password.value,
@@ -944,6 +965,13 @@ async function pageSettings() {
         h("div", { class: "row" }, field("Durée d'une page (s)", num("default_duration", 3, 600)), field("Priorité d'un nouveau bien", f.default_weight),
           field("Durée des pastilles « Nouveau » et « Baisse de prix » (jours)", num("new_badge_days", 1, 365))),
         field("Écran par défaut", f.default_screen, "C'est celui affiché quand l'adresse du player n'indique aucun écran (le DynaScan du NUC).")),
+      h("div", { class: "card" }, h("h2", {}, "Priorités de diffusion (vert, orange, rouge)"),
+        h("p", { class: "muted small" }, "Réglage réservé à l'administrateur. Les utilisateurs choisissent la couleur d'un bien ; vous définissez ici ce que chaque couleur signifie. " +
+          "Passages par tour : combien de fois le bien revient pendant que les autres passent une fois (1 à 10). Durée : en pourcentage de la durée par page de l'écran, " +
+          "appliquée seulement aux biens dont la durée n'est pas fixée dans leur fiche."),
+        h("table", { class: "table" }, h("thead", {}, h("tr", {}, ["Couleur", "Passages par tour", "Durée (% de la durée de l'écran)"].map((x) => h("th", {}, x)))),
+          h("tbody", {}, [["high", "green", "Vert : prioritaire"], ["medium", "orange", "Orange : moyenne"], ["low", "red", "Rouge : faible"]].map(([lvl, col, label]) =>
+            h("tr", {}, h("td", {}, h("span", { class: "prio " + col }, label)), h("td", {}, num("priority_weight_" + lvl, 1, 10)), h("td", {}, num("priority_pct_" + lvl, 30, 300))))))),
       h("div", { class: "card" }, h("h2", {}, "Alertes par e-mail"),
         h("p", { class: "muted small" }, "Prévient si un écran ne répond plus pendant ses heures d'ouverture, ou si le NUC chauffe trop. Les informations de connexion sont conservées sur le NUC."),
         h("label", { class: "chk", style: { marginBottom: "14px" } }, f.alerts_enabled, "Activer les alertes"),

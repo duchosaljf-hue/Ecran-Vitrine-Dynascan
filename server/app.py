@@ -112,7 +112,7 @@ def item_dict(row, today, settings=None, detail=False):
     data = {
         "id": row["id"], "kind": row["kind"], "title": row["title"], "ref": row["ref"], "notes": row["notes"],
         "status": row["status"], "state": state, "busy": busy, "error": row["error"],
-        "duration": row["duration"], "weight": row["weight"],
+        "duration": row["duration"], "weight": row["weight"], "priority_locked": bool(row["priority_locked"]),
         "start_date": row["start_date"], "end_date": row["end_date"], "days_left": days_left,
         "badge": row["badge"], "badge_until": row["badge_until"], "badge_active": effective_badge(row, today),
         "screens": screens_list(row["screens"]), "price": row["price"], "thumb": row["thumb"],
@@ -155,6 +155,7 @@ class ItemPatch(BaseModel):
     status: Optional[Literal["active", "draft"]] = None
     duration: Optional[int] = None
     weight: Optional[int] = None
+    priority_locked: Optional[bool] = None   # réservé à l'administrateur
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     badge: Optional[str] = None
@@ -236,6 +237,12 @@ class SettingsBody(BaseModel):
     smtp_user: Optional[str] = None
     smtp_password: Optional[str] = None
     smtp_from: Optional[str] = None
+    priority_weight_high: Optional[int] = None
+    priority_weight_medium: Optional[int] = None
+    priority_weight_low: Optional[int] = None
+    priority_pct_high: Optional[int] = None
+    priority_pct_medium: Optional[int] = None
+    priority_pct_low: Optional[int] = None
 
 
 # =============================================================== traitement des fichiers
@@ -624,10 +631,22 @@ def api_item_patch(item_id: int, body: ItemPatch, principal=Depends(auth.require
             if body.duration is not None and not 3 <= body.duration <= 600:
                 raise HTTPException(400, "Durée : entre 3 et 600 secondes.")
             put("duration", body.duration, "durée")
+        if "priority_locked" in fields and body.priority_locked is not None:
+            if not principal.is_admin:
+                raise HTTPException(403, "Seul l'administrateur peut verrouiller la priorité.")
         if "weight" in fields and body.weight is not None:
             if not 1 <= body.weight <= 5:
-                raise HTTPException(400, "Importance : de 1 à 5.")
-            put("weight", body.weight, "importance")
+                raise HTTPException(400, "Priorité : de 1 à 5.")
+            new_level = priority_level(body.weight)
+            if new_level != priority_level(row["weight"]):
+                if row["priority_locked"] and not principal.is_admin:
+                    raise HTTPException(403, "La priorité de ce bien a été fixée par l'administrateur : lui seul peut la modifier.")
+                put("weight", PRIORITY_STORED[new_level], "priorité")
+                # un changement fait par l'administrateur verrouille la priorité (sauf s'il en décide autrement)
+                if principal.is_admin and "priority_locked" not in fields:
+                    put("priority_locked", 1, "priorité verrouillée")
+        if "priority_locked" in fields and body.priority_locked is not None:
+            put("priority_locked", int(body.priority_locked), "priorité verrouillée" if body.priority_locked else "priorité déverrouillée")
         if "start_date" in fields:
             put("start_date", valid_date(body.start_date, "début"), "début")
         if "end_date" in fields:
@@ -897,7 +916,9 @@ def api_resume(screen_id: int, principal=Depends(auth.require_ready_user)):
 SETTINGS_PUBLIC = ["agency_name", "agency_address", "agency_phone", "agency_hours", "agency_site", "city",
                    "latitude", "longitude", "timezone", "default_duration", "default_weight", "new_badge_days",
                    "default_screen", "alerts_enabled", "alert_to", "smtp_host", "smtp_port", "smtp_security",
-                   "smtp_user", "smtp_from"]
+                   "smtp_user", "smtp_from",
+                   "priority_weight_high", "priority_weight_medium", "priority_weight_low",
+                   "priority_pct_high", "priority_pct_medium", "priority_pct_low"]
 
 
 def settings_out(settings):
@@ -945,6 +966,11 @@ def api_settings_put(body: SettingsBody, principal=Depends(auth.require_ready_ad
             raise HTTPException(400, "Durée par défaut : entre 3 et 600 secondes.")
         if "default_weight" in values and not 1 <= int(values["default_weight"]) <= 5:
             raise HTTPException(400, "Importance par défaut : de 1 à 5.")
+        for level in ("high", "medium", "low"):
+            if f"priority_weight_{level}" in values and not 1 <= int(values[f"priority_weight_{level}"]) <= 10:
+                raise HTTPException(400, "Passages par tour : de 1 à 10.")
+            if f"priority_pct_{level}" in values and not 30 <= int(values[f"priority_pct_{level}"]) <= 300:
+                raise HTTPException(400, "Durée en pourcentage de celle de l'écran : de 30 à 300.")
         if "default_screen" in values and values["default_screen"] not in screens_slugs(conn):
             raise HTTPException(400, "Écran par défaut inconnu.")
         set_settings(conn, values)
@@ -1020,22 +1046,28 @@ def priority_level(weight):
     return "high" if weight >= 4 else "medium" if weight >= 2 else "low"
 
 
-PRIORITY_DURATION = {"high": 1.5, "medium": 1.0, "low": 0.7}
+PRIORITY_STORED = {"high": 5, "medium": 3, "low": 1}   # valeur enregistrée dans la base pour chaque couleur
 
 
-def effective_duration(row, screen):
-    """Durée choisie pour ce contenu ; à défaut, celle de l'écran ajustée selon la priorité."""
+def priority_passages(settings, weight):
+    """Nombre de passages par tour de la couleur du bien (réglage administrateur)."""
+    return int(settings[f"priority_weight_{priority_level(weight)}"])
+
+
+def effective_duration(row, screen, settings):
+    """Durée choisie pour ce contenu ; à défaut, celle de l'écran ajustée selon la couleur (réglage administrateur)."""
     if row["duration"]:
         return row["duration"]
-    return max(3, round(screen["default_duration"] * PRIORITY_DURATION[priority_level(row["weight"])]))
+    percent = int(settings[f"priority_pct_{priority_level(row['weight'])}"])
+    return max(3, round(screen["default_duration"] * percent / 100))
 
 
 def make_unit(row, screen, settings, today):
     """Convertit un bien en « contenu » prêt à être diffusé (None si rien à afficher)."""
     slides = jloads(row["slides"], [])
     badge = effective_badge(row, today)
-    unit = {"id": row["id"], "kind": row["kind"], "title": row["title"], "weight": row["weight"],
-            "duration": effective_duration(row, screen), "badge": badge,
+    unit = {"id": row["id"], "kind": row["kind"], "title": row["title"], "weight": priority_passages(settings, row["weight"]),
+            "duration": effective_duration(row, screen, settings), "badge": badge,
             "badge_label": BADGES.get(badge, "")}
     if row["kind"] == "view":
         data = jloads(row["view_data"], {})

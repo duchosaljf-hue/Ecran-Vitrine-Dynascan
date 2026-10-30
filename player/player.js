@@ -223,7 +223,7 @@ function buildDeck(list, mode, avoidFirstId) {
   if (!list.length) return [];
   const entries = [];
   list.forEach((u, index) => {
-    const w = Math.max(1, Math.min(5, u.weight || 1));
+    const w = Math.max(1, Math.min(10, u.weight || 1));
     for (let k = 0; k < w; k++) {
       const jitter = mode === "random" ? Math.random() : 0.5;
       entries.push({ u, index, pos: (k + jitter) / w });
