@@ -693,6 +693,7 @@ async function loadScreens() {
   const data = await api("GET", "/api/screens");
   state.screens = data.screens;
   state.defaultScreen = data.default_screen;
+  state.baseUrl = data.base_url || "";
   return data;
 }
 
@@ -716,7 +717,8 @@ async function pageScreens() {
 }
 
 function screenCard(s, admin, defaultSlug, refresh) {
-  const url = location.origin + "/?screen=" + s.slug;
+  // adresse à saisir dans l'écran : celle du NUC sur le réseau de l'agence, même si cette page est ouverte via Tailscale
+  const url = (state.baseUrl || location.origin) + "/?screen=" + s.slug;
   const status = s.online
     ? h("span", {}, h("span", { class: "dot on" }), "En ligne")
     : h("span", {}, h("span", { class: "dot " + (s.last_seen ? "off" : "") }), s.last_seen ? "Hors ligne" : "Jamais connecté");

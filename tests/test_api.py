@@ -202,6 +202,8 @@ def main():
         print("== écrans")
         screens = client.get("/api/screens").json()["screens"]
         check(len(screens) == 2 and screens[0]["slug"] == "dynascan", "deux écrans par défaut")
+        base = client.get("/api/screens").json()["base_url"]
+        check(base == "" or base.startswith("http://"), f"adresse du NUC pour les écrans : {base or 'inconnue'}")
         sid = screens[1]["id"]
         r = client.patch(f"/api/screens/{sid}", json={"weather_every": 5, "fit": "blur", "ticker": "Ligne 1\n\nLigne 2", "orientation": "landscape"}, headers=H)
         s = r.json()["screen"]

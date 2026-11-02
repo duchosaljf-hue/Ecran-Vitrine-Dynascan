@@ -5,6 +5,7 @@ import logging
 import re
 import secrets
 import shutil
+import socket
 import sqlite3
 import threading
 import time
@@ -757,12 +758,27 @@ def screen_dict(row, now=None):
     }
 
 
+def lan_base_url():
+    """Adresse du NUC sur le réseau de l'agence (celle que les écrans doivent utiliser), quel que soit le chemin
+    par lequel la page de gestion est consultée (réseau de l'agence ou Tailscale)."""
+    ip = ""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("192.0.2.1", 9))   # aucune donnée n'est envoyée : on lit l'adresse de la route par défaut
+            ip = sock.getsockname()[0]
+    except OSError:
+        pass
+    if not ip or ip.startswith("127."):
+        return ""
+    return f"http://{ip}:{CFG.port}"
+
+
 @app.get("/api/screens")
 def api_screens(principal=Depends(auth.require_ready_user)):
     with db() as conn:
         rows = conn.execute("SELECT * FROM screens ORDER BY id").fetchall()
         default = get_settings(conn)["default_screen"]
-    return {"screens": [screen_dict(r) for r in rows], "default_screen": default}
+    return {"screens": [screen_dict(r) for r in rows], "default_screen": default, "base_url": lan_base_url()}
 
 
 @app.post("/api/screens")
