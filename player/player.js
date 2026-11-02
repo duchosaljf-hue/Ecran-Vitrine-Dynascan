@@ -18,6 +18,8 @@ const WEATHER_MS = 15 * 60 * 1000;    // rafraîchissement de la météo
 const WEATHER_MAX_AGE_MS = 3 * 3600 * 1000;
 const VIDEO_TIMEOUT_MS = 10 * 60 * 1000;
 const LOAD_TIMEOUT_MS = 30 * 1000;
+const RELOAD_AFTER_MS = 2 * 3600 * 1000;   // rechargement préventif de la page toutes les 2 heures
+const pageStartedAt = Date.now();
 
 const layers = [document.getElementById("layerA"), document.getElementById("layerB")];
 const emptyEl = document.getElementById("empty");
@@ -358,6 +360,9 @@ async function showNext() {
 async function showNextInner() {
   clearTimeout(timer);
   timer = null;
+  // rechargement préventif entre deux diapositives : libère la mémoire des navigateurs intégrés aux petits boîtiers,
+  // qui finissent sinon par fermer l'application après quelques heures
+  if (!PREVIEW && !ONLY && Date.now() - pageStartedAt > RELOAD_AFTER_MS) { location.reload(); return; }
   if (override || closed) return;
   if (paused) { schedule(3000); return; }
 
