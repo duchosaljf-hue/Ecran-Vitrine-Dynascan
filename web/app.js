@@ -266,7 +266,7 @@ function renderForcedPassword() {
 const NAV = [
   { id: "biens", label: "Biens", href: "#/biens" },
   { id: "vues", label: "Vues", href: "#/vues" },
-  { id: "ecrans", label: "Écrans", href: "#/ecrans" },
+  { id: "ecrans", label: "Écrans", href: "#/ecrans", admin: true },
   { id: "utilisateurs", label: "Utilisateurs", href: "#/utilisateurs", admin: true },
   { id: "historique", label: "Historique", href: "#/historique", admin: true },
   { id: "reglages", label: "Réglages", href: "#/reglages", admin: true },
@@ -643,7 +643,8 @@ async function pageItem(id, expectView) {
   }
   left.append(h("button", { class: "btn", type: "button", onclick: () => openPreview({ itemId: id, title: it.title || "Aperçu" }) }, "Voir sur un écran"));
   const histEl = h("div", {}, h("h3", {}, "Historique"), h("ul", { class: "history" }, it.history.length ? it.history.map((e) =>
-    h("li", {}, h("b", {}, ACTIONS[e.action] || e.action), " · ", e.username, h("div", { class: "muted" }, fmtDateTime(e.ts) + (e.detail ? " — " + e.detail : "")))) : h("li", { class: "muted" }, "Aucun historique.")));
+    h("li", {}, h("b", {}, ACTIONS[e.action] || e.action), " · ", e.who || e.username, h("div", { class: "muted" }, fmtDateTime(e.ts) + (e.detail ? " — " + e.detail : "")))) : h("li", { class: "muted" }, "Aucun historique.")),
+    it.added ? h("p", { class: "muted small" }, "Ajouté par " + it.added.who + " le " + fmtDateTime(it.added.ts)) : null);
   left.append(histEl);
 
   // colonne de droite : formulaire
@@ -896,7 +897,7 @@ async function pageAudit() {
     h("p", { class: "muted" }, "Les 300 dernières actions : qui a fait quoi, et quand."),
     h("div", { class: "card scroll" }, h("table", { class: "table" },
       h("thead", {}, h("tr", {}, ["Date", "Qui", "Action", "Détail"].map((x) => h("th", {}, x)))),
-      h("tbody", {}, data.audit.map((a) => h("tr", {}, h("td", {}, fmtDateTime(a.ts)), h("td", {}, a.username), h("td", {}, ACTIONS[a.action] || a.action),
+      h("tbody", {}, data.audit.map((a) => h("tr", {}, h("td", {}, fmtDateTime(a.ts)), h("td", {}, a.who || a.username), h("td", {}, ACTIONS[a.action] || a.action),
         h("td", { class: "muted" }, a.detail || "")))))));
 }
 
@@ -1015,7 +1016,7 @@ async function route() {
   try {
     if (page === "biens") parts[1] ? await pageItem(parseInt(parts[1], 10), false) : await pageItems(false);
     else if (page === "vues") parts[1] ? await pageItem(parseInt(parts[1], 10), true) : await pageItems(true);
-    else if (page === "ecrans") await pageScreens();
+    else if (page === "ecrans" && state.user.role === "admin") await pageScreens();
     else if (page === "utilisateurs" && state.user.role === "admin") await pageUsers();
     else if (page === "historique" && state.user.role === "admin") await pageAudit();
     else if (page === "reglages" && state.user.role === "admin") await pageSettings();

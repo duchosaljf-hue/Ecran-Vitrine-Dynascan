@@ -256,7 +256,9 @@ def main():
             check(user.get("/api/audit").status_code == 403, "historique global interdit")
             check(user.put("/api/settings", json={"city": "X"}, headers=uh).status_code == 403, "réglages interdits")
             check(user.patch(f"/api/screens/{sid}", json={"name": "X"}, headers=uh).status_code == 403, "réglages d'écran interdits")
-            check(user.post(f"/api/screens/{sid}/pause", json={"minutes": 5}, headers=uh).status_code == 200, "pause autorisée")
+            check(user.post(f"/api/screens/{sid}/pause", json={"minutes": 5}, headers=uh).status_code == 403, "pause réservée à l'administrateur")
+            check(user.post(f"/api/screens/{sid}/override", json={"text": "X", "minutes": 5}, headers=uh).status_code == 403, "message urgent réservé à l'administrateur")
+            check(user.get("/api/screens").status_code == 200, "liste des écrans lisible (choix des écrans d'un bien)")
             check(user.get("/api/items").status_code == 200, "liste des biens autorisée")
             current = client.get(f"/api/items/{item_id}").json()["item"]
             check(current["priority_locked"] is True and current["weight"] == 3, "priorité verrouillée après correction de l'administrateur")
@@ -324,6 +326,13 @@ def main():
         check(r.status_code in (200, 307), "redirection /admin")
 
         print("== historique")
+        from server.db import audit as write_audit, db as open_db
+        with open_db() as conn:
+            write_audit(conn, "import", "bien-importe", None, "ancien-dossier.pdf")
+        audit_rows = client.get("/api/audit").json()["audit"]
+        check(all("who" in r for r in audit_rows), "chaque action indique son auteur")
+        check(any(r["username"] == "marie" and r["who"].startswith("Marie") for r in audit_rows), "nom complet de l'utilisateur dans l'historique")
+        check(any(r["username"] == "import" and r["who"] == "Import automatique" for r in audit_rows), "import automatique libellé")
         audit = client.get("/api/audit").json()["audit"]
         check(any(a["action"] == "connexion" for a in audit) and any(a["action"] == "bien-modifie" for a in audit), "historique rempli")
         r = client.post("/api/logout", headers=H)

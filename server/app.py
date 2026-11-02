@@ -133,6 +133,24 @@ def get_item_or_404(conn, item_id):
     return row
 
 
+SYSTEM_ACTORS = {"import": "Import automatique", "système": "Système", "systeme": "Système"}
+
+
+def audit_rows(conn, where="", params=(), order="DESC", limit=200):
+    """Lignes d'historique avec le nom complet de la personne (« Marie Dupont (marie) »)."""
+    rows = conn.execute(
+        "SELECT a.id, a.ts, a.username, a.action, a.item_id, a.detail, u.display_name FROM audit a"
+        " LEFT JOIN users u ON u.username = a.username " + where + f" ORDER BY a.id {order} LIMIT ?",
+        (*params, limit)).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        name = d.pop("display_name", "") or ""
+        d["who"] = SYSTEM_ACTORS.get(d["username"], f"{name} ({d['username']})" if name and name != d["username"] else d["username"])
+        out.append(d)
+    return out
+
+
 def username_by_id(conn, user_id):
     row = conn.execute("SELECT username FROM users WHERE id = ?", (user_id,)).fetchone()
     return row["username"] if row else ""
@@ -529,12 +547,12 @@ def api_item(item_id: int, principal=Depends(auth.require_ready_user)):
     with db() as conn:
         row = get_item_or_404(conn, item_id)
         settings = get_settings(conn)
-        history = conn.execute(
-            "SELECT ts, username, action, detail FROM audit WHERE item_id = ? ORDER BY id DESC LIMIT 15",
-            (item_id,)).fetchall()
+        history = audit_rows(conn, "WHERE a.item_id = ?", (item_id,), "DESC", 15)
+        first = audit_rows(conn, "WHERE a.item_id = ?", (item_id,), "ASC", 1)
         data = item_dict(row, today_local(settings), detail=True)
         data["created_by"] = username_by_id(conn, row["created_by"]) if row["created_by"] else ""
-        data["history"] = [dict(h) for h in history]
+        data["added"] = {"who": first[0]["who"], "ts": first[0]["ts"]} if first else None
+        data["history"] = history
     return {"item": data}
 
 
@@ -883,7 +901,7 @@ def _screen_or_404(conn, screen_id):
 
 
 @app.post("/api/screens/{screen_id}/override")
-def api_override(screen_id: int, body: OverrideBody, principal=Depends(auth.require_ready_user)):
+def api_override(screen_id: int, body: OverrideBody, principal=Depends(auth.require_ready_admin)):
     text = body.text.strip()[:300]
     if not text:
         raise HTTPException(400, "Saisissez le message à afficher.")
@@ -899,7 +917,7 @@ def api_override(screen_id: int, body: OverrideBody, principal=Depends(auth.requ
 
 
 @app.delete("/api/screens/{screen_id}/override")
-def api_override_clear(screen_id: int, principal=Depends(auth.require_ready_user)):
+def api_override_clear(screen_id: int, principal=Depends(auth.require_ready_admin)):
     with db() as conn:
         row = _screen_or_404(conn, screen_id)
         conn.execute("UPDATE screens SET override_text = NULL, override_until = NULL WHERE id = ?", (screen_id,))
@@ -908,7 +926,7 @@ def api_override_clear(screen_id: int, principal=Depends(auth.require_ready_user
 
 
 @app.post("/api/screens/{screen_id}/pause")
-def api_pause(screen_id: int, body: PauseBody, principal=Depends(auth.require_ready_user)):
+def api_pause(screen_id: int, body: PauseBody, principal=Depends(auth.require_ready_admin)):
     if not 1 <= body.minutes <= 24 * 60:
         raise HTTPException(400, "Durée : de 1 minute à 24 heures.")
     with db() as conn:
@@ -920,7 +938,7 @@ def api_pause(screen_id: int, body: PauseBody, principal=Depends(auth.require_re
 
 
 @app.delete("/api/screens/{screen_id}/pause")
-def api_resume(screen_id: int, principal=Depends(auth.require_ready_user)):
+def api_resume(screen_id: int, principal=Depends(auth.require_ready_admin)):
     with db() as conn:
         row = _screen_or_404(conn, screen_id)
         conn.execute("UPDATE screens SET paused_until = NULL WHERE id = ?", (screen_id,))
@@ -1008,8 +1026,8 @@ def api_test_email(principal=Depends(auth.require_ready_admin)):
 @app.get("/api/audit")
 def api_audit(limit: int = 200, principal=Depends(auth.require_ready_admin)):
     with db() as conn:
-        rows = conn.execute("SELECT * FROM audit ORDER BY id DESC LIMIT ?", (min(max(limit, 1), 1000),)).fetchall()
-    return {"audit": [dict(r) for r in rows]}
+        rows = audit_rows(conn, "", (), "DESC", min(max(limit, 1), 1000))
+    return {"audit": rows}
 
 
 @app.get("/api/system")

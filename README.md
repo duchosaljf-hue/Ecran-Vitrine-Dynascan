@@ -35,8 +35,9 @@ de régler leur diffusion, et de piloter **plusieurs écrans** (DynaScan, Canlar
   **aperçu**, **pause** et **message urgent** (affiché en grand sur fond rouge pendant la durée choisie).
 - **Heures d'ouverture par écran** : dans les réglages d'un écran, cochez « Écran noir en dehors de ces heures » : la vitrine n'affiche plus rien
   entre la fermeture et l'ouverture (par exemple 21h30 → 7h00). Pratique pour un écran sans programmation fiable (Canlarriz). L'aperçu n'est pas concerné.
-- **Comptes** : un administrateur et des utilisateurs. Les utilisateurs ajoutent et modifient les affiches ; seul l'administrateur supprime
-  définitivement, gère les comptes, les écrans et les réglages. Historique « qui a fait quoi ». Corbeille conservée 30 jours.
+- **Comptes** : un administrateur et des utilisateurs. Les utilisateurs ne voient que les onglets **Biens** et **Vues** : ils ajoutent et modifient les affiches ;
+  seul l'administrateur supprime définitivement et gère les comptes, les **écrans** (réglages, pause, message urgent) et les réglages.
+  Historique « qui a fait quoi » avec le nom complet de la personne (« Import automatique » pour l'import du premier démarrage). Corbeille conservée 30 jours.
 - **Alertes e-mail** (facultatif) : écran hors ligne pendant ses heures d'ouverture, NUC trop chaud.
 - **Sauvegarde** automatique de la base chaque nuit (14 conservées), téléchargeable depuis les Réglages.
 
