@@ -76,6 +76,11 @@ function ago(seconds) {
   return "il y a " + Math.round(seconds / 86400) + " j";
 }
 
+function fmtSpan(seconds) {
+  const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60);
+  return h >= 24 ? Math.floor(h / 24) + " j " + (h % 24) + " h" : h ? h + " h " + String(m).padStart(2, "0") + " min" : m + " min";
+}
+
 // priorité de diffusion : vert = fréquent et plus long, orange = moyen, rouge = faible (stockée en importance 5 / 3 / 1)
 const PRIORITIES = [
   { value: 5, level: "green", label: "Prioritaire", sub: "Fréquent, durée la plus longue" },
@@ -741,6 +746,9 @@ function screenCard(s, admin, defaultSlug, refresh) {
       h("span", {}, "dernier signe : " + ago(s.seconds_since)),
       s.slug === defaultSlug ? h("span", { class: "chip light" }, "écran par défaut") : null,
       s.last_ip ? h("span", {}, s.last_ip) : null),
+    s.player_info && s.player_info.run !== undefined ? h("div", { class: "small muted" },
+      (s.online ? "Diffuse sans interruption depuis " : "Avait diffusé sans interruption pendant ") + fmtSpan(s.player_info.run) +
+      (s.player_info.mem ? " · mémoire de la page : " + s.player_info.mem + " Mo" : "")) : null,
     s.override ? h("div", { class: "banner" }, "Message affiché : « " + s.override.text + " »") : null,
     s.paused_until ? h("div", { class: "banner" }, "Diffusion en pause jusqu'à " + fmtDateTime(s.paused_until) + ".") : null,
     h("div", {}, h("div", { class: "small muted" }, "Adresse de cet écran"),

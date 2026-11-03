@@ -98,10 +98,13 @@ def main():
 
     old = iso(utcnow() - timedelta(minutes=45))
     with db() as conn:
-        conn.execute("UPDATE screens SET last_seen = ?, open_time = '00:00', close_time = '23:59', alerted = 0 WHERE slug = 'dynascan'", (old,))
+        conn.execute("UPDATE screens SET last_seen = ?, open_time = '00:00', close_time = '23:59', alerted = 0, player_info = '{\"run\": 7500, \"mem\": 91}' WHERE slug = 'dynascan'", (old,))
         conn.execute("UPDATE screens SET last_seen = ?, alerted = 0 WHERE slug = 'canlarriz'", (iso(utcnow()),))
     FakeSMTP.mails.clear()
     monitor.check_screens()
+    import quopri
+    decoded = [quopri.decodestring(m.encode()).decode("utf-8", "replace") for m in FakeSMTP.mails]
+    check(any("2 h 05 min" in m and "91 Mo" in m and "(dernier signe de vie : " in m for m in decoded), "l'alerte indique depuis quand l'écran diffusait et la mémoire utilisée")
     check(len(FakeSMTP.mails) == 1 and "Écran hors ligne" in FakeSMTP.mails[0].replace("=C3=89", "É") or any("hors ligne" in m for m in FakeSMTP.mails), "alerte « écran hors ligne » envoyée")
     monitor.check_screens()
     check(len(FakeSMTP.mails) == 1, "une seule alerte par panne")

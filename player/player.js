@@ -131,10 +131,25 @@ async function fetchJSON(url) {
 }
 
 // ---------------------------------------------------------------- liste des contenus
+// diagnostic envoyé au serveur : durée de diffusion sans interruption (survit aux rechargements de la page,
+// disparaît si l'application est fermée) et mémoire utilisée par la page
+function diagnostics() {
+  if (PREVIEW || ONLY) return "";
+  let start = Date.now();
+  try {
+    const saved = Number(sessionStorage.getItem("vitrine-run-start"));
+    if (saved) start = saved; else sessionStorage.setItem("vitrine-run-start", String(start));
+  } catch (_) { /* ignoré */ }
+  let out = "run=" + Math.round((Date.now() - start) / 1000);
+  try { if (performance.memory) out += "&mem=" + Math.round(performance.memory.usedJSHeapSize / 1048576); } catch (_) { /* ignoré */ }
+  return out;
+}
+
 async function pollPlaylist() {
   let data = null;
   try {
-    data = await fetchJSON(API);
+    const extra = diagnostics();
+    data = await fetchJSON(extra ? API + (API.indexOf("?") === -1 ? "?" : "&") + extra : API);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (_) { /* ignoré */ }
   } catch (err) {
     console.warn("serveur injoignable :", err);

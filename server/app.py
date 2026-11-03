@@ -767,7 +767,7 @@ def screen_dict(row, now=None):
         "weather_every": row["weather_every"], "weather_seconds": row["weather_seconds"],
         "corner_clock": bool(row["corner_clock"]), "fit": row["fit"], "ticker": row["ticker"],
         "open_time": row["open_time"], "close_time": row["close_time"],
-        "hours_enabled": bool(row["hours_enabled"]),
+        "hours_enabled": bool(row["hours_enabled"]), "player_info": jloads(row["player_info"], {}),
         "last_seen": row["last_seen"], "last_ip": row["last_ip"],
         "online": seconds is not None and seconds <= ONLINE_SECONDS, "seconds_since": seconds,
         "override": {"text": row["override_text"], "until": row["override_until"]}
@@ -1117,7 +1117,8 @@ def make_unit(row, screen, settings, today):
 
 
 @app.get("/api/player/{slug}/playlist")
-def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Optional[int] = None):
+def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Optional[int] = None,
+                        run: Optional[int] = None, mem: Optional[int] = None):
     if only is not None:
         auth.current_principal(request)  # l'aperçu d'un bien précis exige d'être connecté
         preview = 1
@@ -1125,8 +1126,12 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
         screen, settings = resolve_screen(conn, slug)
         now = utcnow()
         if not preview:
-            conn.execute("UPDATE screens SET last_seen = ?, last_ip = ?, alerted = 0 WHERE id = ?",
-                         (now_iso(), request.client.host if request.client else "", screen["id"]))
+            # diagnostic : depuis combien de temps l'écran diffuse sans interruption et la mémoire utilisée par sa page
+            info = None
+            if run is not None or mem is not None:
+                info = json.dumps({"run": max(0, min(run or 0, 10 ** 8)), "mem": max(0, min(mem or 0, 10 ** 5))})
+            conn.execute("UPDATE screens SET last_seen = ?, last_ip = ?, alerted = 0, player_info = COALESCE(?, player_info) WHERE id = ?",
+                         (now_iso(), request.client.host if request.client else "", info, screen["id"]))
         today = today_local(settings)
         if only is not None:
             rows = [get_item_or_404(conn, only)]

@@ -1,4 +1,5 @@
 """Tâches de fond : température du NUC, état des écrans, alertes e-mail, sauvegardes, nettoyage."""
+import json
 import logging
 import shutil
 import smtplib
@@ -134,11 +135,19 @@ def check_screens():
             offline = (now - seen) > timedelta(minutes=OFFLINE_ALERT_MINUTES)
             if offline and within_hours(screen, now.astimezone(tz)) and not screen["alerted"]:
                 conn.execute("UPDATE screens SET alerted = 1 WHERE id = ?", (screen["id"],))
-                to_alert.append((screen["name"], seen.astimezone(tz).strftime("%d/%m/%Y à %H:%M")))
-    for name, last_seen in to_alert:
+                try:
+                    info = json.loads(screen["player_info"] or "{}")
+                except ValueError:
+                    info = {}
+                detail = ""
+                if info.get("run") is not None:
+                    detail = (f"\nAvant l'arrêt, l'écran diffusait sans interruption depuis {info['run'] // 3600} h {info['run'] % 3600 // 60:02d} min"
+                              + (f", la page utilisait {info['mem']} Mo de mémoire" if info.get("mem") else "") + ".")
+                to_alert.append((screen["name"], seen.astimezone(tz).strftime("%d/%m/%Y à %H:%M"), detail))
+    for name, last_seen, detail in to_alert:
         _alert(f"Écran hors ligne : {name}",
                f"L'écran « {name} » ne répond plus depuis plus de {OFFLINE_ALERT_MINUTES} minutes "
-               f"(dernier signe de vie : {last_seen}).\n\nVérifiez qu'il est allumé et connecté au Wi-Fi.")
+               f"(dernier signe de vie : {last_seen}).{detail}\n\nVérifiez qu'il est allumé et connecté au Wi-Fi.")
 
 
 _last_temp_alert = 0.0

@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS screens (
     open_time TEXT NOT NULL DEFAULT '07:00',
     close_time TEXT NOT NULL DEFAULT '21:30',
     hours_enabled INTEGER NOT NULL DEFAULT 0,
+    player_info TEXT NOT NULL DEFAULT '',
     override_text TEXT,
     override_until TEXT,
     paused_until TEXT,
@@ -187,6 +188,8 @@ def init_db():
         columns = {r["name"] for r in conn.execute("PRAGMA table_info(screens)")}
         if "hours_enabled" not in columns:
             conn.execute("ALTER TABLE screens ADD COLUMN hours_enabled INTEGER NOT NULL DEFAULT 0")
+        if "player_info" not in columns:
+            conn.execute("ALTER TABLE screens ADD COLUMN player_info TEXT NOT NULL DEFAULT ''")
         item_columns = {r["name"] for r in conn.execute("PRAGMA table_info(items)")}
         if "priority_locked" not in item_columns:
             conn.execute("ALTER TABLE items ADD COLUMN priority_locked INTEGER NOT NULL DEFAULT 0")
