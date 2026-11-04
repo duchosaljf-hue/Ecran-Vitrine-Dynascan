@@ -1129,7 +1129,9 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
             # diagnostic : depuis combien de temps l'écran diffuse sans interruption et la mémoire utilisée par sa page
             info = None
             if run is not None or mem is not None:
-                info = json.dumps({"run": max(0, min(run or 0, 10 ** 8)), "mem": max(0, min(mem or 0, 10 ** 5))})
+                merged = jloads(screen["player_info"], {})
+                merged.update({"run": max(0, min(run or 0, 10 ** 8)), "mem": max(0, min(mem or 0, 10 ** 5))})
+                info = json.dumps(merged)
             conn.execute("UPDATE screens SET last_seen = ?, last_ip = ?, alerted = 0, player_info = COALESCE(?, player_info) WHERE id = ?",
                          (now_iso(), request.client.host if request.client else "", info, screen["id"]))
         today = today_local(settings)
@@ -1173,6 +1175,20 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
     payload["server_time"] = int(time.time() * 1000)
     payload["app_version"] = VERSION
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/player/{slug}/event")
+def api_player_event(slug: str, ev: str = ""):
+    """Événement signalé par la page de l'écran : masquée / de nouveau visible (permet de savoir si une autre
+    application ou une touche du clavier a pris la main, ou si l'application a été fermée sans prévenir)."""
+    if ev not in ("hidden", "visible"):
+        raise HTTPException(400, "Événement inconnu.")
+    with db() as conn:
+        screen, _ = resolve_screen(conn, slug)
+        info = jloads(screen["player_info"], {})
+        info.update({"ev": ev, "ev_at": now_iso()})
+        conn.execute("UPDATE screens SET player_info = ? WHERE id = ?", (json.dumps(info), screen["id"]))
+    return {"ok": True}
 
 
 @app.get("/api/status")

@@ -245,11 +245,18 @@ def main():
         check(hall["online"] is True, "écran en ligne après une requête du player")
         client.get("/api/player/hall-d-entree/playlist?run=7260&mem=85")
         hall = [x for x in client.get("/api/screens").json()["screens"] if x["slug"] == "hall-d-entree"][0]
-        check(hall["player_info"] == {"run": 7260, "mem": 85}, f"diagnostic de l'écran enregistré : {hall['player_info']}")
+        check(hall["player_info"].get("run") == 7260 and hall["player_info"].get("mem") == 85, f"diagnostic de l'écran enregistré : {hall['player_info']}")
+        r = client.post("/api/player/hall-d-entree/event?ev=hidden")
+        check(r.status_code == 200, "événement « page masquée » accepté")
+        check(client.post("/api/player/hall-d-entree/event?ev=nimporte").status_code == 400, "événement inconnu refusé")
+        client.get("/api/player/hall-d-entree/playlist?run=7300&mem=86")
+        hall = [x for x in client.get("/api/screens").json()["screens"] if x["slug"] == "hall-d-entree"][0]
+        check(hall["player_info"]["ev"] == "hidden" and hall["player_info"]["run"] == 7300, "le dernier événement est conservé avec le diagnostic")
+        client.get("/api/player/hall-d-entree/playlist?run=7260&mem=85")
         client.get("/api/player/hall-d-entree/playlist?preview=1&run=1&mem=1")
         client.get("/api/player/hall-d-entree/playlist")
         hall = [x for x in client.get("/api/screens").json()["screens"] if x["slug"] == "hall-d-entree"][0]
-        check(hall["player_info"] == {"run": 7260, "mem": 85}, "l'aperçu et une requête sans diagnostic ne l'écrasent pas")
+        check(hall["player_info"].get("run") == 7260 and hall["player_info"].get("mem") == 85, "l'aperçu et une requête sans diagnostic ne l'écrasent pas")
         r = client.delete(f"/api/screens/{screens[0]['id']}", headers=H)
         check(r.status_code == 400, "écran par défaut non supprimable")
 

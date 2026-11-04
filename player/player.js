@@ -145,6 +145,16 @@ function diagnostics() {
   return out;
 }
 
+// la page signale quand elle est masquée (touche du clavier, autre application) : on distingue ainsi une
+// application « poussée au second plan » d'une application fermée sans prévenir
+function reportEvent(ev) {
+  if (PREVIEW || ONLY) return;
+  const url = "/api/player/" + encodeURIComponent(SLUG) + "/event?ev=" + ev;
+  try { fetch(url, { method: "POST", keepalive: true }).catch(() => {}); } catch (_) { /* ignoré */ }
+}
+document.addEventListener("visibilitychange", () => reportEvent(document.hidden ? "hidden" : "visible"));
+window.addEventListener("pagehide", () => reportEvent("hidden"));
+
 async function pollPlaylist() {
   let data = null;
   try {

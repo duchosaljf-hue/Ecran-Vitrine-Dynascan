@@ -748,7 +748,8 @@ function screenCard(s, admin, defaultSlug, refresh) {
       s.last_ip ? h("span", {}, s.last_ip) : null),
     s.player_info && s.player_info.run !== undefined ? h("div", { class: "small muted" },
       (s.online ? "Diffuse sans interruption depuis " : "Avait diffusé sans interruption pendant ") + fmtSpan(s.player_info.run) +
-      (s.player_info.mem ? " · mémoire de la page : " + s.player_info.mem + " Mo" : "")) : null,
+      (s.player_info.mem ? " · mémoire de la page : " + s.player_info.mem + " Mo" : "") +
+      (s.player_info.ev ? " · dernier événement : page " + (s.player_info.ev === "hidden" ? "masquée" : "de nouveau affichée") + " à " + fmtDateTime(s.player_info.ev_at) : "")) : null,
     s.override ? h("div", { class: "banner" }, "Message affiché : « " + s.override.text + " »") : null,
     s.paused_until ? h("div", { class: "banner" }, "Diffusion en pause jusqu'à " + fmtDateTime(s.paused_until) + ".") : null,
     h("div", {}, h("div", { class: "small muted" }, "Adresse de cet écran"),

@@ -143,6 +143,12 @@ def check_screens():
                 if info.get("run") is not None:
                     detail = (f"\nAvant l'arrêt, l'écran diffusait sans interruption depuis {info['run'] // 3600} h {info['run'] % 3600 // 60:02d} min"
                               + (f", la page utilisait {info['mem']} Mo de mémoire" if info.get("mem") else "") + ".")
+                if info.get("ev") == "hidden" and parse_iso(info.get("ev_at")):
+                    when = parse_iso(info["ev_at"]).astimezone(tz).strftime("%H:%M")
+                    detail += (f"\nLa page a été masquée à {when} : une autre application ou une touche du clavier (Échap, Retour, Windows) "
+                               "a pris la main, l'application ne s'est pas plantée.")
+                elif detail:
+                    detail += "\nAucun masquage de la page avant l'arrêt : coupure du Wi-Fi ou du courant, plantage ou fermeture de l'application par Android."
                 to_alert.append((screen["name"], seen.astimezone(tz).strftime("%d/%m/%Y à %H:%M"), detail))
     for name, last_seen, detail in to_alert:
         _alert(f"Écran hors ligne : {name}",
