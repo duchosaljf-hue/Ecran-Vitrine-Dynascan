@@ -78,6 +78,33 @@ systemctl daemon-reload
 systemctl enable vitrine.service >/dev/null 2>&1
 systemctl restart vitrine.service
 
+echo "==> Surveillance du réseau (relance le Wi-Fi, puis redémarre le NUC si la box reste injoignable)"
+install -m 755 "$ROOT/scripts/netwatch.sh" /usr/local/sbin/vitrine-netwatch
+cat > /etc/systemd/system/vitrine-netwatch.service <<EOF
+[Unit]
+Description=Vitrine : contrôle du réseau
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vitrine-netwatch
+EOF
+cat > /etc/systemd/system/vitrine-netwatch.timer <<EOF
+[Unit]
+Description=Vitrine : contrôle du réseau toutes les 3 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=3min
+
+[Install]
+WantedBy=timers.target
+EOF
+# Wi-Fi : pas d'économie d'énergie (cause fréquente de déconnexions), prise en compte au prochain redémarrage
+mkdir -p /etc/NetworkManager/conf.d
+printf '[connection]\nwifi.powersave = 2\n' > /etc/NetworkManager/conf.d/wifi-powersave-off.conf
+systemctl daemon-reload
+systemctl enable --now vitrine-netwatch.timer >/dev/null 2>&1
+
 if [ "$UPDATE_ONLY" -eq 0 ]; then
   echo "==> Lancement automatique du player à l'ouverture de session"
   AUTOSTART_DIR="$TARGET_HOME/.config/autostart"

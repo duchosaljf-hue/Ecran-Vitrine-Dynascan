@@ -114,6 +114,9 @@ La synchronisation Google Drive n'existe plus : on dépose désormais les affich
 - **État du serveur** : `curl http://127.0.0.1:8080/api/status` · **Journal** : `journalctl -u vitrine -f` · **Redémarrer** : `sudo systemctl restart vitrine`
 - **Un fichier n'est pas traité** : la fiche du bien affiche l'erreur (PDF protégé ou corrompu, format de vidéo inhabituel).
 - **La météo n'apparaît pas** : le NUC doit avoir accès à Internet (Open-Meteo) ; vérifiez qu'aucun rafraîchissement automatique ne recharge la page sur l'écran.
+- **Réseau du NUC** : un petit contrôle (`vitrine-netwatch`, installé par `install.sh`) vérifie toutes les 3 minutes que le NUC joint la box. Au bout de 2 échecs il relance le Wi-Fi,
+  au bout de 3 NetworkManager, au bout de 6 (≈ 18 min) il redémarre le NUC, au plus une fois toutes les 6 heures. Le journal est consultable avec `journalctl -t vitrine-netwatch`.
+  L'économie d'énergie du Wi-Fi est désactivée (`/etc/NetworkManager/conf.d/wifi-powersave-off.conf`). Si possible, brancher le NUC en Ethernet.
 - **Un écran apparaît hors ligne** : il n'a pas interrogé le serveur depuis plus de 2 minutes (écran éteint, Wi-Fi coupé, mauvaise adresse).
 - **Sauvegarde / restauration** : copiez le dossier `data/` (base `vitrine.db`, affiches dans `media/`, sauvegardes dans `backups/`).
 
