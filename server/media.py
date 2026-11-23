@@ -124,12 +124,17 @@ def process_image(src: Path, out_dir: Path, item_id, rev):
 def process_video(src: Path, out_dir: Path, item_id, rev):
     info = probe_video(src)
     dest = out_dir / "video.mp4"
-    if info.get("codec_name") == "h264" and info.get("pix_fmt") == "yuv420p":
+    # au plus 1920 pixels sur le grand côté (1080 x 1920 en portrait) : au-delà, les petits écrans Android
+    # (1 Go de mémoire pour le Canlarriz) peinent à décoder la vidéo
+    small = max(int(info.get("width") or 0), int(info.get("height") or 0)) <= 1920
+    if info.get("codec_name") == "h264" and info.get("pix_fmt") == "yuv420p" and small:
         run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-c:v", "copy", "-an",
              "-movflags", "+faststart", str(dest)], timeout=1800)
     else:
         run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-c:v", "libx264", "-preset", "veryfast",
-             "-crf", "23", "-pix_fmt", "yuv420p", "-vf", "scale=w='min(1920,iw)':h=-2", "-an",
+             "-crf", "23", "-pix_fmt", "yuv420p",
+             "-vf", "scale=w='min(1920,iw)':h='min(1920,ih)':force_original_aspect_ratio=decrease,"
+                    "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-an",
              "-movflags", "+faststart", str(dest)], timeout=3 * 3600)
     video_thumb(dest, out_dir / "thumb.jpg")
     return [{"type": "video", "src": url_for(item_id, rev, dest.name)}]
