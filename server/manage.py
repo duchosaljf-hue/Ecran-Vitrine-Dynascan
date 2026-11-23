@@ -4,6 +4,7 @@ Utilisation (depuis le dossier du projet) :
     .venv/bin/python -m server.manage ensure-admin       crée le compte « admin » s'il n'existe pas encore
     .venv/bin/python -m server.manage reset-password NOM  nouveau mot de passe temporaire pour un compte
     .venv/bin/python -m server.manage backup              sauvegarde de la base de données
+    .venv/bin/python -m server.manage notify SUJET TEXTE  alerte e-mail (si activée) + ligne d'historique
 """
 import sys
 
@@ -57,6 +58,16 @@ def backup():
     return 0
 
 
+def notify(subject, body):
+    """Utilisé par les scripts du NUC (relance automatique des écrans…)."""
+    init_db()
+    with db() as conn:
+        audit(conn, "système", "ecran-relance", None, subject)
+    monitor._alert(subject, body)
+    print(subject)
+    return 0
+
+
 def main(argv):
     if len(argv) >= 2 and argv[1] == "ensure-admin":
         return ensure_admin()
@@ -64,6 +75,8 @@ def main(argv):
         return reset_password(argv[2])
     if len(argv) >= 2 and argv[1] == "backup":
         return backup()
+    if len(argv) >= 4 and argv[1] == "notify":
+        return notify(argv[2], argv[3])
     print(__doc__)
     return 2
 

@@ -24,7 +24,7 @@ as_user() { sudo -u "$TARGET_USER" "$@"; }
 echo "==> Paquets"
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  python3 python3-venv python3-pip poppler-utils ffmpeg unclutter x11-xserver-utils curl ca-certificates
+  python3 python3-venv python3-pip poppler-utils ffmpeg unclutter x11-xserver-utils curl ca-certificates adb
 
 if [ "$UPDATE_ONLY" -eq 0 ]; then
   echo "==> Navigateur (Google Chrome)"
@@ -104,6 +104,32 @@ mkdir -p /etc/NetworkManager/conf.d
 printf '[connection]\nwifi.powersave = 2\n' > /etc/NetworkManager/conf.d/wifi-powersave-off.conf
 systemctl daemon-reload
 systemctl enable --now vitrine-netwatch.timer >/dev/null 2>&1
+
+echo "==> Relance automatique des écrans Android (si ADB_SCREENS est renseigné dans config.env)"
+chmod +x "$ROOT/scripts/screenwatch.sh"
+cat > /etc/systemd/system/vitrine-screenwatch.service <<EOF
+[Unit]
+Description=Vitrine : relance des écrans Android qui ne diffusent plus
+
+[Service]
+Type=oneshot
+User=$TARGET_USER
+WorkingDirectory=$ROOT
+ExecStart=$ROOT/scripts/screenwatch.sh
+EOF
+cat > /etc/systemd/system/vitrine-screenwatch.timer <<EOF
+[Unit]
+Description=Vitrine : contrôle des écrans Android toutes les 2 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2min
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now vitrine-screenwatch.timer >/dev/null 2>&1
 
 if [ "$UPDATE_ONLY" -eq 0 ]; then
   echo "==> Lancement automatique du player à l'ouverture de session"

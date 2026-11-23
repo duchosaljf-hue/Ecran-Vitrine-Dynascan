@@ -117,6 +117,10 @@ La synchronisation Google Drive n'existe plus : on dépose désormais les affich
 - **Réseau du NUC** : un petit contrôle (`vitrine-netwatch`, installé par `install.sh`) vérifie toutes les 3 minutes que le NUC joint la box. Au bout de 2 échecs il relance le Wi-Fi,
   au bout de 3 NetworkManager, au bout de 6 (≈ 18 min) il redémarre le NUC, au plus une fois toutes les 6 heures. Le journal est consultable avec `journalctl -t vitrine-netwatch`.
   L'économie d'énergie du Wi-Fi est désactivée (`/etc/NetworkManager/conf.d/wifi-powersave-off.conf`). Si possible, brancher le NUC en Ethernet.
+- **Écran Android (Canlarriz) revenu au menu ou au bureau Android** : si `ADB_SCREENS` est renseigné dans `config.env`
+  (ex. `ADB_SCREENS="canlarriz=192.168.1.16:5555"`), le contrôle `vitrine-screenwatch` relance Magic Player quand la page
+  ne répond plus depuis 4 minutes (puis redémarre l'écran, au plus une fois toutes les 2 heures) et envoie un e-mail.
+  Journal : `journalctl -t vitrine-screenwatch`. Pour régler un écran sans être interrompu : `touch ~/Ecran-Vitrine-Dynascan/data/screenwatch/pause` (2 heures).
 - **Un écran apparaît hors ligne** : il n'a pas interrogé le serveur depuis plus de 2 minutes (écran éteint, Wi-Fi coupé, mauvaise adresse).
 - **Sauvegarde / restauration** : copiez le dossier `data/` (base `vitrine.db`, affiches dans `media/`, sauvegardes dans `backups/`).
 

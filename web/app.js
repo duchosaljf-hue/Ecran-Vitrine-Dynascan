@@ -17,7 +17,7 @@ const VIEW_TYPES = { texte: "Annonce", qr: "QR code", agence: "Agence" };
 const ACTIONS = {
   connexion: "Connexion", "bien-cree": "Bien ajouté", "bien-modifie": "Bien modifié", "fichier-ajoute": "Fichier traité",
   "fichier-remplace": "Affiche remplacée", "erreur-fichier": "Erreur de fichier", "bien-corbeille": "Mis à la corbeille",
-  "bien-restaure": "Restauré", "bien-supprime": "Supprimé définitivement", "bien-importe": "Importé", "vue-creee": "Vue créée",
+  "bien-restaure": "Restauré", "bien-supprime": "Supprimé définitivement", "bien-importe": "Importé", "ecran-relance": "Écran relancé automatiquement", "vue-creee": "Vue créée",
   "utilisateur-cree": "Compte créé", "utilisateur-modifie": "Compte modifié", "utilisateur-supprime": "Compte supprimé",
   "mot-de-passe-change": "Mot de passe changé", "mot-de-passe-reinitialise": "Mot de passe réinitialisé",
   "ecran-cree": "Écran ajouté", "ecran-modifie": "Écran modifié", "ecran-supprime": "Écran supprimé",
