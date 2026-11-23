@@ -1130,7 +1130,7 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
             info = None
             if run is not None or mem is not None:
                 merged = jloads(screen["player_info"], {})
-                merged.update({"run": max(0, min(run or 0, 10 ** 8)), "mem": max(0, min(mem or 0, 10 ** 5))})
+                merged.update({"run": max(0, min(run or 0, 10 ** 8)), "mem": max(0, min(mem or 0, 10 ** 5)), "at": now_iso()})
                 info = json.dumps(merged)
             conn.execute("UPDATE screens SET last_seen = ?, last_ip = ?, alerted = 0, player_info = COALESCE(?, player_info) WHERE id = ?",
                          (now_iso(), request.client.host if request.client else "", info, screen["id"]))

@@ -1,4 +1,5 @@
 """Tests complémentaires : reprise de l'ancien dossier, alertes e-mail (lancer : .venv/bin/python tests/test_extra.py)."""
+import json
 import os
 import socketserver
 import subprocess
@@ -98,7 +99,7 @@ def main():
 
     old = iso(utcnow() - timedelta(minutes=45))
     with db() as conn:
-        conn.execute("UPDATE screens SET last_seen = ?, open_time = '00:00', close_time = '23:59', alerted = 0, player_info = '{\"run\": 7500, \"mem\": 91}' WHERE slug = 'dynascan'", (old,))
+        conn.execute("UPDATE screens SET last_seen = ?, open_time = '00:00', close_time = '23:59', alerted = 0, player_info = ? WHERE slug = 'dynascan'", (old, json.dumps({"run": 7500, "mem": 91, "at": old})))
         conn.execute("UPDATE screens SET last_seen = ?, alerted = 0 WHERE slug = 'canlarriz'", (iso(utcnow()),))
     FakeSMTP.mails.clear()
     monitor.check_screens()
@@ -108,6 +109,14 @@ def main():
     check(len(FakeSMTP.mails) == 1 and "Écran hors ligne" in FakeSMTP.mails[0].replace("=C3=89", "É") or any("hors ligne" in m for m in FakeSMTP.mails), "alerte « écran hors ligne » envoyée")
     monitor.check_screens()
     check(len(FakeSMTP.mails) == 1, "une seule alerte par panne")
+    # diagnostic reçu bien avant le dernier signe de vie : on ne le présente pas comme récent
+    with db() as conn:
+        conn.execute("UPDATE screens SET alerted = 0, player_info = ? WHERE slug = 'dynascan'",
+                     (json.dumps({"run": 7500, "mem": 91, "at": iso(utcnow() - timedelta(days=5))}),))
+    FakeSMTP.mails.clear()
+    monitor.check_screens()
+    decoded = [quopri.decodestring(m.encode()).decode("utf-8", "replace") for m in FakeSMTP.mails]
+    check(any("n'envoie plus de diagnostic" in m and "2 h 05" not in m for m in decoded), "diagnostic ancien : l'alerte le signale au lieu de le présenter comme récent")
     with db() as conn:
         conn.execute("UPDATE screens SET alerted = 0, open_time = '03:00', close_time = '03:01' WHERE slug = 'dynascan'")
     FakeSMTP.mails.clear()

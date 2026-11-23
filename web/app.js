@@ -746,7 +746,11 @@ function screenCard(s, admin, defaultSlug, refresh) {
       h("span", {}, "dernier signe : " + ago(s.seconds_since)),
       s.slug === defaultSlug ? h("span", { class: "chip light" }, "écran par défaut") : null,
       s.last_ip ? h("span", {}, s.last_ip) : null),
-    s.player_info && s.player_info.run !== undefined ? h("div", { class: "small muted" },
+    s.player_info && s.player_info.run !== undefined && s.last_seen && (!s.player_info.at || new Date(s.last_seen) - new Date(s.player_info.at) > 5 * 60 * 1000)
+      ? h("div", { class: "banner" }, "Cet écran n'envoie plus de diagnostic" + (s.player_info.at ? " depuis le " + fmtDateTime(s.player_info.at) : "") +
+        " : la page qu'il exécute n'est probablement pas la version actuelle de la vitrine.")
+      : null,
+    s.player_info && s.player_info.run !== undefined && s.player_info.at && s.last_seen && new Date(s.last_seen) - new Date(s.player_info.at) <= 5 * 60 * 1000 ? h("div", { class: "small muted" },
       (s.online ? "Diffuse sans interruption depuis " : "Avait diffusé sans interruption pendant ") + fmtSpan(s.player_info.run) +
       (s.player_info.mem ? " · mémoire de la page : " + s.player_info.mem + " Mo" : "") +
       (s.player_info.ev ? " · dernier événement : page " + (s.player_info.ev === "hidden" ? "masquée" : "de nouveau affichée") + " à " + fmtDateTime(s.player_info.ev_at) : "")) : null,
