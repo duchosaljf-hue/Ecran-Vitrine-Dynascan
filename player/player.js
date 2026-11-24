@@ -323,6 +323,20 @@ function addRibbon(root, unit) {
   root.appendChild(mk("div", "ribbon ribbon-" + unit.badge, unit.badge_label));
 }
 
+// Quand l'affiche laisse une bande vide en haut (affiche A3 sur un écran 9:16), la pastille devient un
+// bandeau horizontal dans cette bande au lieu de recouvrir le coin de l'affiche.
+function placeRibbon(root, mediaW, mediaH) {
+  const ribbon = root.querySelector(".ribbon");
+  if (!ribbon || !mediaW || !mediaH || root.classList.contains("fit-cover")) return;
+  const W = window.innerWidth, H = window.innerHeight;
+  const shownH = Math.min(H, W * mediaH / mediaW);
+  const band = (H - shownH) / 2;
+  if (band < H * 0.05) return;   // moins de 5 % de la hauteur : on garde la pastille en diagonale
+  ribbon.classList.add("ribbon-band");
+  ribbon.style.height = Math.floor(band) + "px";
+  ribbon.style.fontSize = Math.round(Math.min(band * 0.42, W * 0.065)) + "px";
+}
+
 function waitFor(el, eventName) {
   return new Promise((resolve, reject) => {
     el.addEventListener(eventName, () => resolve(), { once: true });
@@ -345,6 +359,7 @@ async function buildSlide(entry) {
     root.appendChild(v);
     addRibbon(root, entry.unit);
     await waitFor(v, "canplay");
+    placeRibbon(root, v.videoWidth, v.videoHeight);
     return { el: root, video: v };
   }
   if (fit === "blur") {
@@ -359,6 +374,7 @@ async function buildSlide(entry) {
   root.appendChild(img);
   addRibbon(root, entry.unit);
   await waitFor(img, "load");
+  placeRibbon(root, img.naturalWidth, img.naturalHeight);
   return { el: root, video: null };
 }
 
