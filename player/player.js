@@ -147,8 +147,15 @@ function diagnostics() {
 
 // la page signale quand elle est masquée (touche du clavier, autre application) : on distingue ainsi une
 // application « poussée au second plan » d'une application fermée sans prévenir
+let reloading = false;   // rechargement voulu (mise à jour, préventif) : ce n'est pas un masquage
+
+function reloadPage() {
+  reloading = true;
+  location.reload();
+}
+
 function reportEvent(ev) {
-  if (PREVIEW || ONLY) return;
+  if (PREVIEW || ONLY || reloading) return;
   const url = "/api/player/" + encodeURIComponent(SLUG) + "/event?ev=" + ev;
   try { fetch(url, { method: "POST", keepalive: true }).catch(() => {}); } catch (_) { /* ignoré */ }
 }
@@ -173,7 +180,7 @@ async function pollPlaylist() {
 function applyPlaylist(data) {
   // après une mise à jour du serveur, la page se recharge toute seule pour prendre la nouvelle version
   if (data.app_version) {
-    if (appVersion && appVersion !== data.app_version) { location.reload(); return; }
+    if (appVersion && appVersion !== data.app_version) { reloadPage(); return; }
     appVersion = data.app_version;
   }
   if (data.server_time) clockOffset = data.server_time - Date.now();
@@ -387,7 +394,7 @@ async function showNextInner() {
   timer = null;
   // rechargement préventif entre deux diapositives : libère la mémoire des navigateurs intégrés aux petits boîtiers,
   // qui finissent sinon par fermer l'application après quelques heures
-  if (!PREVIEW && !ONLY && Date.now() - pageStartedAt > RELOAD_AFTER_MS) { location.reload(); return; }
+  if (!PREVIEW && !ONLY && Date.now() - pageStartedAt > RELOAD_AFTER_MS) { reloadPage(); return; }
   if (override || closed) return;
   if (paused) { schedule(3000); return; }
 
