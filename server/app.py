@@ -1116,6 +1116,21 @@ def make_unit(row, screen, settings, today):
     return unit
 
 
+def screen_open_now(screen, settings):
+    """Vrai si l'écran est dans ses heures d'ouverture, à l'heure locale du site."""
+    try:
+        oh, om = map(int, screen["open_time"].split(":"))
+        ch, cm = map(int, screen["close_time"].split(":"))
+    except ValueError:
+        return True
+    start, end = oh * 60 + om, ch * 60 + cm
+    if start == end:
+        return True
+    now = utcnow().astimezone(local_tz(settings))
+    minutes = now.hour * 60 + now.minute
+    return start <= minutes < end if start < end else (minutes >= start or minutes < end)
+
+
 @app.get("/api/player/{slug}/playlist")
 def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Optional[int] = None,
                         run: Optional[int] = None, mem: Optional[int] = None):
@@ -1165,6 +1180,8 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
                    "fit": screen["fit"], "default_duration": screen["default_duration"],
                    # l'aperçu ignore les heures d'ouverture : on doit pouvoir le consulter à tout moment
                    "hours_enabled": bool(screen["hours_enabled"]) and not preview,
+                   # calculé ici, à l'heure du site : l'horloge des écrans Android n'est pas fiable
+                   "is_open": (not screen["hours_enabled"]) or bool(preview) or screen_open_now(screen, settings),
                    "open_time": screen["open_time"], "close_time": screen["close_time"],
                    "ticker": [] if only is not None else [l for l in screen["ticker"].splitlines() if l.strip()]},
         "site": {"city": settings["city"], "latitude": float(settings["latitude"]),

@@ -95,6 +95,7 @@ function localMinutes() {
 function outsideHours() {
   const s = cfg.screen || {};
   if (!s.hours_enabled) return false;
+  if (typeof s.is_open === "boolean") return !s.is_open;   // décidé par le serveur, à l'heure du site
   const start = toMinutes(s.open_time);
   const end = toMinutes(s.close_time);
   if (start === null || end === null || start === end) return false;

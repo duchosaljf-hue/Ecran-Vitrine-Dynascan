@@ -215,6 +215,9 @@ def main():
         check(r.json()["screen"]["hours_enabled"] is True, "écran noir hors heures activé")
         pl = client.get("/api/player/canlarriz/playlist").json()["screen"]
         check(pl["hours_enabled"] is True and pl["open_time"] == "07:00" and pl["close_time"] == "21:30", "heures transmises au player")
+        client.patch(f"/api/screens/{sid}", json={"open_time": "00:00", "close_time": "23:59"}, headers=H)
+        check(client.get("/api/player/canlarriz/playlist").json()["screen"]["is_open"] is True, "ouverture calculée par le serveur (plage 00:00-23:59)")
+        client.patch(f"/api/screens/{sid}", json={"open_time": "07:00", "close_time": "21:30"}, headers=H)
         pl = client.get("/api/player/canlarriz/playlist?preview=1").json()["screen"]
         check(pl["hours_enabled"] is False, "l'aperçu ignore les heures d'ouverture")
         client.patch(f"/api/screens/{sid}", json={"hours_enabled": False}, headers=H)
