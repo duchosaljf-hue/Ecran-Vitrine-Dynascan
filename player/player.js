@@ -335,6 +335,9 @@ function placeRibbon(root, mediaW, mediaH) {
   ribbon.classList.add("ribbon-band");
   ribbon.style.height = Math.floor(band) + "px";
   ribbon.style.fontSize = Math.round(Math.min(band * 0.42, W * 0.065)) + "px";
+  const bottom = ribbon.cloneNode(true);   // même bandeau dans la bande vide du bas
+  bottom.classList.add("ribbon-bottom");
+  root.appendChild(bottom);
 }
 
 function waitFor(el, eventName) {

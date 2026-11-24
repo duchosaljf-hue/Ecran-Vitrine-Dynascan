@@ -69,6 +69,7 @@ html, body {
   letter-spacing: 0.12em;
   box-shadow: none;
 }
+.ribbon.ribbon-band.ribbon-bottom { top: auto; bottom: 0; }
 .ribbon-nouveau { background: var(--vert); }
 .ribbon-vendu { background: #1f1f1f; }
 .ribbon-compromis { background: #c9760a; }
