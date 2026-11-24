@@ -1116,6 +1116,20 @@ def make_unit(row, screen, settings, today):
     return unit
 
 
+def player_files_version():
+    """Version du player : change dès qu'un de ses fichiers change, pour que les écrans se rechargent
+    d'eux-mêmes après chaque mise à jour (pas seulement quand le numéro de version est modifié)."""
+    digest = hashlib.sha1(VERSION.encode())
+    for path in sorted(CFG.player_dir.glob("*")):
+        if path.is_file():
+            digest.update(path.name.encode())
+            digest.update(path.read_bytes())
+    return f"{VERSION}-{digest.hexdigest()[:8]}"
+
+
+PLAYER_VERSION = player_files_version()
+
+
 def screen_open_now(screen, settings):
     """Vrai si l'écran est dans ses heures d'ouverture, à l'heure locale du site."""
     try:
@@ -1190,7 +1204,7 @@ def api_player_playlist(slug: str, request: Request, preview: int = 0, only: Opt
     }
     payload["version"] = hashlib.sha1(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:12]
     payload["server_time"] = int(time.time() * 1000)
-    payload["app_version"] = VERSION
+    payload["app_version"] = PLAYER_VERSION
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
 
